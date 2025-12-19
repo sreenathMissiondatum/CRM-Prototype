@@ -5,7 +5,7 @@ import {
     History, Users, ChevronRight,
     Pen, EllipsisVertical, Plus, Briefcase,
     DollarSign, Landmark, Flag, CircleCheck,
-    StickyNote, ArrowLeft
+    StickyNote, ArrowLeft, LayoutDashboard
 } from 'lucide-react';
 import AccountLeadsTab from './AccountLeadsTab';
 import AccountLoansTab from './AccountLoansTab';
@@ -19,7 +19,7 @@ import AccountAuditTab from './AccountAuditTab';
 import NotesTab from '../Shared/NotesTab';
 import AccountEditDrawer from './AccountEditDrawer';
 
-const AccountDetail = ({ onBack, initialAccount }) => {
+const AccountDetail = ({ onBack, initialAccount, onOpen360 }) => {
     const [activeTab, setActiveTab] = useState('overview');
     const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
 
@@ -139,6 +139,12 @@ const AccountDetail = ({ onBack, initialAccount }) => {
                     </div>
 
                     <div className="flex items-center gap-3">
+                        <button
+                            onClick={onOpen360}
+                            className="flex items-center gap-2 px-3 py-2 bg-slate-800 text-white rounded-lg text-sm font-medium hover:bg-slate-900 shadow-sm shadow-slate-400 transition-colors"
+                        >
+                            <LayoutDashboard size={16} /> Open 360 View
+                        </button>
                         <button className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
                             <StickyNote size={16} /> Add Note
                         </button>

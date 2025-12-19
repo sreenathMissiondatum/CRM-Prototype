@@ -12,6 +12,7 @@ import AccountDetail from './components/Accounts/AccountDetail';
 import ContactDetail from './components/Contacts/ContactDetail';
 import LoanProgramsList from './components/LoanPrograms/LoanProgramsList';
 import AccountsList from './components/Accounts/AccountsList';
+import Account360 from './components/Accounts/Account360';
 import AdminPanel from './components/Admin/AdminPanel';
 import { Plus, LayoutGrid, BarChart3 } from 'lucide-react';
 
@@ -292,7 +293,11 @@ function App() {
               <LoanProgramsList />
             </div>
           ) : activeTab === 'account-detail' ? (
-            <AccountDetail onBack={handleBackFromDetail} initialAccount={selectedAccount} />
+            <AccountDetail
+              onBack={handleBackFromDetail}
+              initialAccount={selectedAccount}
+              onOpen360={() => setActiveTab('account-360')}
+            />
           ) : activeTab === 'accounts' ? (
             <div className="h-full overflow-y-auto">
               <AccountsList />
@@ -301,6 +306,8 @@ function App() {
             <ContactDetail onBack={handleBackFromDetail} initialContactName={selectedAccount?.name} />
           ) : activeTab === 'admin' ? (
             <AdminPanel onBack={() => setActiveTab('dashboard')} />
+          ) : activeTab === 'account-360' ? (
+            <Account360 onBack={() => setActiveTab('accounts')} initialAccount={selectedAccount} />
           ) : activeTab === 'create-lead' ? (
             <div className="h-full overflow-y-auto">
               <CreateLead onNavigate={setActiveTab} />
