@@ -7,7 +7,7 @@ import {
     ShieldAlert,
     Zap,
     AlertTriangle,
-    ThermoSun,
+    // ThermoSun,
     Anchor,
     Wind,
     CheckCircle2,

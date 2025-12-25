@@ -11,6 +11,11 @@ import DataIntegrations from './sections/DataIntegrations';
 import Picklists from './sections/Picklists';
 import AuditLogs from './sections/AuditLogs';
 import CreditMemoTemplates from './sections/CreditMemoTemplates';
+import FundersAndInvestors from './sections/FundersAndInvestors';
+import CapitalCommitments from './sections/CapitalCommitments';
+import FundsAndPools from './sections/FundsAndPools';
+import AllocationRules from './sections/AllocationRules';
+import CapitalImpactDashboard from './sections/CapitalImpactDashboard';
 
 // Temporary placeholders for sections
 const SectionPlaceholder = ({ title }) => (
@@ -22,7 +27,7 @@ const SectionPlaceholder = ({ title }) => (
     </div>
 );
 
-const AdminPanel = ({ onBack }) => {
+const AdminPanel = ({ onBack, userRole }) => {
     const [activeSection, setActiveSection] = useState('general');
 
     const renderSection = () => {
@@ -51,6 +56,18 @@ const AdminPanel = ({ onBack }) => {
                 return <SectionPlaceholder title="Notifications & Email Templates" />;
             case 'audit':
                 return <AuditLogs />;
+            // Capital Management Placeholders
+            case 'capital-dashboard':
+                return <CapitalImpactDashboard />;
+            case 'funders':
+                return <FundersAndInvestors />;
+            case 'capital-commitments':
+                return <CapitalCommitments />;
+            case 'funds-pools':
+                return <FundsAndPools />;
+            case 'allocation-rules':
+                return <AllocationRules />;
+
             default:
                 return <SectionPlaceholder title="Settings" />;
         }
@@ -61,9 +78,9 @@ const AdminPanel = ({ onBack }) => {
 
     return (
         <div className="flex h-full bg-slate-50 relative z-50">
-            <AdminSidebar activeSection={activeSection} onSelectSection={setActiveSection} onBack={onBack} />
-            <div className={`flex-1 bg-slate-50/50 flex flex-col ${isFullHeight ? 'overflow-hidden' : 'overflow-y-auto'}`}>
-                <div className={`${isFullHeight ? 'h-full flex flex-col' : 'max-w-6xl mx-auto min-h-full p-8 w-full'}`}>
+            <AdminSidebar activeSection={activeSection} onSelectSection={setActiveSection} onBack={onBack} userRole={userRole} />
+            <div className={`flex-1 bg-slate-50/50 flex flex-col min-w-0 ${isFullHeight ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+                <div className={`${isFullHeight ? 'h-full flex flex-col' : 'max-w-6xl mx-auto min-h-full p-8 w-full pb-20'}`}>
                     {renderSection()}
                 </div>
             </div>

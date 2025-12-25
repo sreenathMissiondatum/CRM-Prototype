@@ -13,13 +13,13 @@ import Pagination from '../../../Shared/Pagination';
 const UsersTab = () => {
     // Mock Data (Enhanced with Frozen and Invited statuses)
     const [users, setUsers] = useState([
-        { id: 1, name: 'Alex Morgan', email: 'alex@acmelending.com', role: 'Admin', status: 'Active', lastActive: '2 min ago', avatar: 'AM', department: 'Executive', location: 'New York, NY', phone: '(212) 555-0123' },
-        { id: 2, name: 'Sarah Connor', email: 'sarah@acmelending.com', role: 'Loan Officer', status: 'Active', lastActive: '1 hr ago', avatar: 'SC', department: 'Sales', location: 'Austin, TX', phone: '(512) 555-0199' },
-        { id: 3, name: 'James Wright', email: 'james@acmelending.com', role: 'Underwriter', status: 'Active', lastActive: '4 hrs ago', avatar: 'JW', department: 'Risk', location: 'Chicago, IL', phone: '(312) 555-0144' },
-        { id: 4, name: 'Emily Chen', email: 'emily@acmelending.com', role: 'Processor', status: 'Inactive', lastActive: '2 days ago', avatar: 'EC', department: 'Operations', location: 'San Francisco, CA', phone: '(415) 555-0177' },
-        { id: 5, name: 'Michael Ross', email: 'mike@acmelending.com', role: 'Loan Officer', status: 'Active', lastActive: '10 min ago', avatar: 'MR', department: 'Sales', location: 'New York, NY', phone: '(212) 555-0188' },
-        { id: 6, name: 'David Miller', email: 'david@acmelending.com', role: 'Loan Officer', status: 'Active', lastActive: 'Yesterday', avatar: 'DM', department: 'Sales', location: 'Miami, FL', phone: '(305) 555-0155' },
-        { id: 7, name: 'Elena Fisher', email: 'elena@acmelending.com', role: 'Admin', status: 'Active', lastActive: 'Today', avatar: 'EF', department: 'IT', location: 'Remote', phone: '(206) 555-0122' },
+        { id: 1, name: 'Alex Morgan', email: 'alex@acmelending.com', role: 'Admin', status: 'Active', lastActive: '2 min ago', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=150&h=150', department: 'Executive', location: 'New York, NY', phone: '(212) 555-0123' },
+        { id: 2, name: 'Sarah Connor', email: 'sarah@acmelending.com', role: 'Loan Officer', status: 'Active', lastActive: '1 hr ago', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=150&h=150', department: 'Sales', location: 'Austin, TX', phone: '(512) 555-0199' },
+        { id: 3, name: 'James Wright', email: 'james@acmelending.com', role: 'Underwriter', status: 'Active', lastActive: '4 hrs ago', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=150&h=150', department: 'Risk', location: 'Chicago, IL', phone: '(312) 555-0144' },
+        { id: 4, name: 'Emily Chen', email: 'emily@acmelending.com', role: 'Processor', status: 'Inactive', lastActive: '2 days ago', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150&h=150', department: 'Operations', location: 'San Francisco, CA', phone: '(415) 555-0177' },
+        { id: 5, name: 'Michael Ross', email: 'mike@acmelending.com', role: 'Loan Officer', status: 'Active', lastActive: '10 min ago', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150&h=150', department: 'Sales', location: 'New York, NY', phone: '(212) 555-0188' },
+        { id: 6, name: 'David Miller', email: 'david@acmelending.com', role: 'Loan Officer', status: 'Active', lastActive: 'Yesterday', avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&q=80&w=150&h=150', department: 'Sales', location: 'Miami, FL', phone: '(305) 555-0155' },
+        { id: 7, name: 'Elena Fisher', email: 'elena@acmelending.com', role: 'Admin', status: 'Active', lastActive: 'Today', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150&h=150', department: 'IT', location: 'Remote', phone: '(206) 555-0122' },
         // New Mock Data for Testing
         { id: 8, name: 'Frozen Account', email: 'frozen@acmelending.com', role: 'Loan Officer', status: 'Frozen', lastActive: '1 week ago', avatar: 'FA', department: 'Sales', location: 'Denver, CO', phone: '(303) 555-0100' },
         { id: 9, name: 'Invited User', email: 'newhire@acmelending.com', role: 'Processor', status: 'Invited', lastActive: 'Pending', avatar: 'IU', department: 'Operations', location: 'Seattle, WA', phone: '(206) 555-0999' },
@@ -418,8 +418,12 @@ const UsersTab = () => {
                                                 if (col.id === 'user') {
                                                     return (
                                                         <div key={col.id} className="flex items-center gap-3 min-w-0">
-                                                            <div className="w-9 h-9 shrink-0 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600 font-bold text-xs ring-2 ring-transparent group-hover:ring-blue-100 transition-all">
-                                                                {user.avatar}
+                                                            <div className="w-9 h-9 shrink-0 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600 font-bold text-xs ring-2 ring-transparent group-hover:ring-blue-100 transition-all overflow-hidden">
+                                                                {user.avatar.startsWith('http') ? (
+                                                                    <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    user.avatar
+                                                                )}
                                                             </div>
                                                             <div className="min-w-0">
                                                                 <div className={`font-bold text-sm truncate transition-colors ${isSelected ? 'text-blue-700' : 'text-slate-700 group-hover:text-blue-700'}`}>{user.name}</div>

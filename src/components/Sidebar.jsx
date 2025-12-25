@@ -22,11 +22,11 @@ import {
 } from 'lucide-react';
 import { twMerge } from 'tailwind-merge';
 
-const Sidebar = ({ active, onNavigate, isPinned, onTogglePin, className }) => {
+const Sidebar = ({ active, onNavigate, isPinned, onTogglePin, className, userRole }) => {
     // --------------------------------------------------------------------------
     // MOCK USER PERMISSIONS
     // --------------------------------------------------------------------------
-    const userRole = 'ADMIN'; // Try 'LO' to see 'Loan Programs' disappear
+    // userRole prop is now passed from App.jsx
 
     // --------------------------------------------------------------------------
     // STATE
@@ -105,7 +105,7 @@ const Sidebar = ({ active, onNavigate, isPinned, onTogglePin, className }) => {
                         {
                             id: 'loan-programs',
                             label: 'Loan Programs',
-                            roles: ['ADMIN', 'OPS', 'CREDIT', 'PRODUCT'] // Role Guard
+                            roles: ['ADMIN', 'ORG_ADMIN', 'OPS', 'CREDIT', 'PRODUCT'] // Role Guard
                         }
                     ]
                 },
@@ -325,18 +325,21 @@ const Sidebar = ({ active, onNavigate, isPinned, onTogglePin, className }) => {
                     </button>
                 </div>
 
-                {/* User Mini Profile */}
                 <div className={twMerge(
                     "mt-4 pt-4 border-t border-slate-800/50 flex items-center gap-3 transition-opacity duration-200",
                     isExpanded ? "px-2 opacity-100" : "px-0 justify-center opacity-100" // Keep avatar visible
                 )}>
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center text-xs font-bold text-white shadow-md shrink-0">
-                        AM
+                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shadow-md shrink-0 overflow-hidden border border-slate-600">
+                        <img
+                            src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=150&h=150"
+                            alt="Alex Morgan"
+                            className="w-full h-full object-cover"
+                        />
                     </div>
                     {isExpanded && (
                         <div className="flex flex-col overflow-hidden transition-all duration-300 animate-in fade-in">
                             <span className="text-sm font-semibold text-slate-200">Alex Morgan</span>
-                            <span className="text-[10px] text-slate-500">Loan Officer</span>
+                            <span className="text-[10px] text-slate-500">Admin</span>
                         </div>
                     )}
                 </div>

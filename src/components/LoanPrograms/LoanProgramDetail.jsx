@@ -218,6 +218,70 @@ const LoanProgramDetail = ({ program, onBack }) => {
                     {/* COL 2: UNDERWRITING & METRICS */}
                     <div className="space-y-8">
 
+                        {/* SECTION: CAPITAL ALIGNMENT (NEW) */}
+                        <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-emerald-50/50">
+                                <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                    <Activity size={20} className="text-emerald-600" />
+                                    Capital Alignment
+                                </h2>
+                                <div className="text-xs font-medium text-emerald-700 bg-emerald-100 px-2 py-1 rounded-full border border-emerald-200">
+                                    Auto-Derived
+                                </div>
+                            </div>
+                            <div className="p-6 space-y-6">
+                                {/* 1. Eligible Structures */}
+                                <div>
+                                    <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Eligible Fund Structures</div>
+                                    <div className="flex gap-2">
+                                        {['Revolving Loan Fund', 'Blended Capital Fund'].map(tag => (
+                                            <span key={tag} className="px-2.5 py-1 bg-slate-100 text-slate-700 rounded text-xs font-medium border border-slate-200">
+                                                {tag}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* 2. Capital Composition */}
+                                <div>
+                                    <div className="flex justify-between items-end mb-2">
+                                        <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Typical Capital Composition</div>
+                                        <div className="text-xs font-medium text-slate-500">Based on active rules</div>
+                                    </div>
+                                    <div className="h-4 w-full bg-slate-100 rounded-full overflow-hidden flex">
+                                        <div className="h-full bg-blue-500 w-[30%]" title="Grant: 30%"></div>
+                                        <div className="h-full bg-purple-500 w-[40%]" title="PRI: 40%"></div>
+                                        <div className="h-full bg-slate-400 w-[30%]" title="Debt: 30%"></div>
+                                    </div>
+                                    <div className="flex justify-between mt-2 text-xs text-slate-500 font-medium">
+                                        <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-blue-500"></div> Grant (~30%)</div>
+                                        <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-purple-500"></div> PRI (~40%)</div>
+                                        <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-slate-400"></div> Debt (~30%)</div>
+                                    </div>
+                                </div>
+
+                                {/* 3. Cost & Mandates */}
+                                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100">
+                                    <div>
+                                        <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Est. Cost of Capital</div>
+                                        <div className="text-lg font-bold text-slate-900">2.1% – 2.6%</div>
+                                        <div className="text-[10px] text-slate-400 mt-1">Weighted Avg.</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Mandates Satisfied</div>
+                                        <div className="space-y-1">
+                                            {['CRA Eligible', 'Multifamily < 80% AMI', 'LMI Tracts'].map(m => (
+                                                <div key={m} className="flex items-center gap-1.5 text-xs text-emerald-700">
+                                                    <CheckCircle2 size={12} className="text-emerald-500" />
+                                                    {m}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
                         {/* SECTION 4: UNDERWRITING */}
                         <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                             <div className="px-6 py-4 border-b border-slate-100">

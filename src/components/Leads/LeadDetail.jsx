@@ -458,16 +458,25 @@ const LeadDetail = ({ lead, onBack, onViewAccount, onViewContact }) => {
 
                     <div className="flex justify-between items-start mb-2">
                         <div>
-                            <div className="flex items-center gap-2 mb-1">
-                                <h2 className="text-xl font-bold text-slate-800">{lead.name}</h2>
-                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${lead.stage === 'Qualified' ? 'bg-emerald-100 text-emerald-700' :
-                                    lead.stage === 'New' ? 'bg-blue-100 text-blue-700' :
-                                        'bg-slate-100 text-slate-600'
-                                    }`}>
-                                    {lead.stage}
-                                </span>
+                            <div className="flex items-center gap-3 mb-1">
+                                {lead.avatar && (
+                                    <div className="w-12 h-12 rounded-full border border-slate-200 overflow-hidden shrink-0">
+                                        <img src={lead.avatar} alt={lead.name} className="w-full h-full object-cover" />
+                                    </div>
+                                )}
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <h2 className="text-xl font-bold text-slate-800">{lead.name}</h2>
+                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${lead.stage === 'Qualified' ? 'bg-emerald-100 text-emerald-700' :
+                                            lead.stage === 'New' ? 'bg-blue-100 text-blue-700' :
+                                                'bg-slate-100 text-slate-600'
+                                            }`}>
+                                            {lead.stage}
+                                        </span>
+                                    </div>
+                                    <div className="text-sm text-slate-500 font-medium">{lead.businessName}</div>
+                                </div>
                             </div>
-                            <div className="text-sm text-slate-500 font-medium">{lead.businessName}</div>
                         </div>
                         <div className="flex items-center gap-2 relative" ref={menuRef}>
                             <span className="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded border border-slate-100">

@@ -10,6 +10,7 @@ import {
     Database, X, ArrowUp, ArrowDown, GripVertical, Eye, Pencil,
     UserCog, ArrowRightCircle, Trash2
 } from 'lucide-react';
+import AvatarWithPresence from '../Shared/AvatarWithPresence';
 import { createPortal } from 'react-dom';
 import LeadFilterDrawer from './LeadFilterDrawer';
 
@@ -23,21 +24,24 @@ const LeadList = ({ leads, selectedLeadId, onSelectLead, onCreateLead, compact, 
     const [isColumnManagerOpen, setIsColumnManagerOpen] = useState(false); // New Manager Modal
     const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false); // Restored Drawer
     const [selectedIds, setSelectedIds] = useState(new Set());
-    const [sortConfig, setSortConfig] = useState({ key: 'lastActivity', label: 'Last Activity' });
+    const [sortConfig, setSortConfig] = useState({ key: 'lastActivity', direction: 'desc' }); // Updated Sort State
     const [activeRowMenu, setActiveRowMenu] = useState(null); // Track open row menu ID
+    const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0 }); // Track menu position
+    const [draggedColumn, setDraggedColumn] = useState(null); // For Reordering
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [searchQuery, setSearchQuery] = useState(''); // Global Search State
 
     // Columns Config ('actions' is fixed and permanent)
     const [columns, setColumns] = useState([
-        { id: 'select', label: '', visible: true, width: '40px', fixed: true },
-        { id: 'name', label: 'Lead Name', visible: true, width: '3fr' },
-        { id: 'business', label: 'Business', visible: true, width: '2fr' },
-        { id: 'officer', label: 'Assigned LO', visible: true, width: '1.5fr' },
-        { id: 'source', label: 'Source', visible: true, width: '1.5fr' },
-        { id: 'stage', label: 'Stage', visible: true, width: '1.5fr' },
-        { id: 'lastActivity', label: 'Last Activity', visible: true, width: '1.5fr' },
-        { id: 'actions', label: 'Actions', visible: true, width: '110px', fixed: true }
+        { id: 'select', label: '', visible: true, width: 50, fixed: true, sortable: false },
+        { id: 'name', label: 'Lead Name', visible: true, width: 300, sortable: true },
+        { id: 'business', label: 'Business', visible: true, width: 200, sortable: true },
+        { id: 'officer', label: 'Assigned LO', visible: true, width: 150, sortable: true },
+        { id: 'source', label: 'Source', visible: true, width: 150, sortable: true },
+        { id: 'stage', label: 'Stage', visible: true, width: 150, sortable: true },
+        { id: 'lastActivity', label: 'Last Activity', visible: true, width: 150, sortable: true },
+        { id: 'actions', label: 'Actions', visible: true, width: 110, fixed: true, sortable: false }
     ]);
 
     const stages = ['All', 'New', 'Contacted', 'Qualified', 'Converted', 'Disqualified', 'Nurture', 'Lost', 'On Hold']; // Added more to test scroll
@@ -49,10 +53,95 @@ const LeadList = ({ leads, selectedLeadId, onSelectLead, onCreateLead, compact, 
         ));
     };
 
+    // --- SORTING ---
+    const handleSort = (key) => {
+        setSortConfig(current => {
+            if (current.key === key) {
+                return { key, direction: current.direction === 'asc' ? 'desc' : 'asc' };
+            }
+            // Default sort direction for new columns
+            // Dates/Time usually start Descending, Text starts Ascending
+            if (key === 'lastActivity') return { key, direction: 'desc' };
+            return { key, direction: 'asc' };
+        });
+    };
+
+    // --- CONTEXTUAL DEFAULTS ---
+    React.useEffect(() => {
+        setSortConfig({ key: 'lastActivity', direction: 'desc' });
+        setCurrentPage(1);
+    }, [activeStage]);
+
+    // --- DRAG & REORDER ---
+    const handleDragStart = (e, index) => {
+        setDraggedColumn(index);
+        e.dataTransfer.effectAllowed = 'move';
+        // HTML5 Drag ghost image customization if needed
+    };
+
+    const handleDragOver = (e, index) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    };
+
+    const handleDrop = (e, dropIndex) => {
+        e.preventDefault();
+        if (draggedColumn === null || draggedColumn === dropIndex) return;
+
+        const newCols = [...columns];
+        const draggedItem = newCols[draggedColumn];
+
+        // Prevent moving fixed columns or dropping past them if logic strictly forbids, 
+        // but for now just basic reorder
+        if (draggedItem.fixed || newCols[dropIndex].fixed) return;
+
+        newCols.splice(draggedColumn, 1);
+        newCols.splice(dropIndex, 0, draggedItem);
+        setColumns(newCols);
+        setDraggedColumn(null);
+    };
+
+    // --- RESIZING ---
+    const [resizingCol, setResizingCol] = useState(null);
+    const resizingRef = useRef(null); // Ref to track mouse move across window
+
+    const startResize = (e, colId) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const col = columns.find(c => c.id === colId);
+        const startW = typeof col.width === 'number' ? col.width : parseInt(col.width, 10) || 150;
+        setResizingCol({ id: colId, startX: e.pageX, startWidth: startW });
+    };
+
+    const onMouseMove = React.useCallback((e) => {
+        if (!resizingCol) return;
+        const diff = e.pageX - resizingCol.startX;
+        const newWidth = Math.max(50, resizingCol.startWidth + diff); // Min width 50
+
+        setColumns(cols => cols.map(col =>
+            col.id === resizingCol.id ? { ...col, width: newWidth } : col
+        ));
+    }, [resizingCol]);
+
+    const onMouseUp = React.useCallback(() => {
+        setResizingCol(null);
+    }, []);
+
+    React.useEffect(() => {
+        if (resizingCol) {
+            window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('mouseup', onMouseUp);
+        }
+        return () => {
+            window.removeEventListener('mousemove', onMouseMove);
+            window.removeEventListener('mouseup', onMouseUp);
+        };
+    }, [resizingCol, onMouseMove, onMouseUp]);
+
     const handleUpdateColumns = (newColumns) => {
         // Ensure 'actions' column is always preserved at the end
         const preservedColumns = newColumns.filter(c => c.id !== 'actions');
-        const actionsCol = columns.find(c => c.id === 'actions') || { id: 'actions', label: 'Actions', visible: true, width: '110px', fixed: true };
+        const actionsCol = columns.find(c => c.id === 'actions') || { id: 'actions', label: 'Actions', visible: true, width: 110, fixed: true, sortable: false };
 
         setColumns([...preservedColumns, actionsCol]);
         setIsColumnManagerOpen(false);
@@ -113,23 +202,53 @@ const LeadList = ({ leads, selectedLeadId, onSelectLead, onCreateLead, compact, 
             });
         }
 
+        // Global Fuzzy Search (Multi-field, Token-based)
+        if (searchQuery) {
+            const queryTokens = searchQuery.toLowerCase().split(' ').filter(t => t.length > 0);
+            result = result.filter(item => {
+                const searchableText = [
+                    item.name,
+                    item.businessName,
+                    item.email,
+                    item.assignedOfficer,
+                    item.stage,
+                    item.source,
+                    item.phone || '', // Phone might be missing in some mocks
+                    item.id
+                ].join(' ').toLowerCase();
+
+                return queryTokens.every(token => searchableText.includes(token));
+            });
+        }
+
         result = [...result].sort((a, b) => {
-            if (sortConfig.key === 'lastActivity') {
+            if (!sortConfig.direction) return 0;
+            const { key, direction } = sortConfig;
+            const multiplier = direction === 'asc' ? 1 : -1;
+
+            if (key === 'lastActivity') {
                 const parseActivityDate = (activity) => {
                     if (activity === 'Today') return new Date();
                     const currentYear = new Date().getFullYear();
+                    // Handle "Dec 3" or similar
                     return new Date(`${activity} ${currentYear}`);
                 };
                 const dateA = parseActivityDate(a.lastActivity);
                 const dateB = parseActivityDate(b.lastActivity);
-                return dateB - dateA;
+                return (dateA - dateB) * multiplier;
             }
-            if (sortConfig.key === 'name') return a.name.localeCompare(b.name);
-            if (sortConfig.key === 'stage') return a.stage.localeCompare(b.stage);
-            return 0;
+            if (key === 'stage') {
+                // Custom Stage Order could be implemented here, simple string for now
+                return a.stage.localeCompare(b.stage) * multiplier;
+            }
+
+            // Default String Sort
+            const valA = a[key] ? a[key].toString().toLowerCase() : '';
+            const valB = b[key] ? b[key].toString().toLowerCase() : '';
+            return valA.localeCompare(valB) * multiplier;
         });
         return result;
-    }, [leads, activeStage, sortConfig, currentFilters]);
+    }, [leads, activeStage, sortConfig, currentFilters, searchQuery]);
 
     // Active filter count for badge
     const activeFilterCount = useMemo(() => {
@@ -152,7 +271,8 @@ const LeadList = ({ leads, selectedLeadId, onSelectLead, onCreateLead, compact, 
     );
 
     const visibleColumns = columns.filter(c => c.visible);
-    const gridTemplateColumns = visibleColumns.map(c => c.width).join(' ');
+    // Grid Template now uses explicit pixel widths from state
+    const gridTemplateColumns = visibleColumns.map(c => typeof c.width === 'number' ? `${c.width}px` : c.width).join(' ');
 
     const stats = {
         total: leads.length,
@@ -328,43 +448,34 @@ const LeadList = ({ leads, selectedLeadId, onSelectLead, onCreateLead, compact, 
                         {/* Controls */}
                         <div className="flex gap-2 shrink-0 w-full xl:w-auto">
                             {/* Search */}
-                            <div className="relative flex-1 xl:flex-none">
+                            <div className="relative flex-1 xl:flex-none group">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                                <input type="text" placeholder="Search..." className="pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm w-full xl:w-64 focus:outline-none focus:ring-2 focus:ring-blue-100" />
+                                <input
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={(e) => {
+                                        setSearchQuery(e.target.value);
+                                        setCurrentPage(1); // Reset page on search
+                                    }}
+                                    placeholder="Search by Lead Name, Business, Email, Assigned LO…"
+                                    className="pl-10 pr-9 py-2 bg-white border border-slate-200 rounded-full text-sm w-full xl:w-96 focus:outline-none focus:ring-2 focus:ring-blue-100 shadow-sm transition-all focus:border-blue-300 placeholder:text-slate-400"
+                                />
+                                {searchQuery && (
+                                    <button
+                                        onClick={() => {
+                                            setSearchQuery('');
+                                            setCurrentPage(1);
+                                        }}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded-full hover:bg-slate-100 transition-colors"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                )}
                             </div>
 
                             {/* Tools */}
                             <div className="flex gap-2">
-                                {/* Sort Dropdown */}
-                                <div className="relative">
-                                    <button
-                                        onClick={() => setIsSortMenuOpen(!isSortMenuOpen)}
-                                        className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors shadow-sm"
-                                    >
-                                        <ArrowUpDown size={16} />
-                                        <span>{sortConfig.label}</span>
-                                    </button>
-                                    {isSortMenuOpen && (
-                                        <>
-                                            <div className="fixed inset-0 z-10" onClick={() => setIsSortMenuOpen(false)}></div>
-                                            <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-xl z-20 p-1 animate-in fade-in slide-in-from-top-2 duration-200">
-                                                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider px-2 py-1 mb-1">Sort By</div>
-                                                <button onClick={() => changeSort('lastActivity', 'Last Activity')} className="w-full text-left px-2 py-1.5 text-sm text-slate-600 hover:bg-slate-50 rounded-lg transition-colors flex justify-between">
-                                                    <span>Last Activity</span>
-                                                    {sortConfig.key === 'lastActivity' && <Check size={14} className="text-blue-600" />}
-                                                </button>
-                                                <button onClick={() => changeSort('name', 'Lead Name')} className="w-full text-left px-2 py-1.5 text-sm text-slate-600 hover:bg-slate-50 rounded-lg transition-colors flex justify-between">
-                                                    <span>Lead Name</span>
-                                                    {sortConfig.key === 'name' && <Check size={14} className="text-blue-600" />}
-                                                </button>
-                                                <button onClick={() => changeSort('stage', 'Stage')} className="w-full text-left px-2 py-1.5 text-sm text-slate-600 hover:bg-slate-50 rounded-lg transition-colors flex justify-between">
-                                                    <span>Stage</span>
-                                                    {sortConfig.key === 'stage' && <Check size={14} className="text-blue-600" />}
-                                                </button>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
+                                {/* Sort Dropdown REMOVED - Visual only */}
 
                                 {/* Column Manager Toggle */}
                                 <button onClick={() => setIsColumnMenuOpen(!isColumnMenuOpen)} className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-50 relative">
@@ -437,247 +548,311 @@ const LeadList = ({ leads, selectedLeadId, onSelectLead, onCreateLead, compact, 
                     />
 
                     {/* Grid Table Container */}
-                    <div className="flex flex-col relative rounded-b-2xl">
-
-                        {/* Combined Header & Body - Natural Height */}
-                        <div className="bg-white">
-
-                            {/* Header (Sticky) */}
-                            <div
-                                className="grid gap-4 px-6 py-3 bg-white border-b border-l-4 border-transparent border-slate-200 text-[11px] font-bold text-slate-400 uppercase tracking-wider items-center sticky top-20 z-40 shadow-sm"
-                                style={{ gridTemplateColumns }}
-                            >
-                                {columns.map(col => (
-                                    col.visible && (
-                                        <div key={col.id} className={col.id === 'actions' ? 'text-right' : ''}>
-                                            {col.id === 'select' ? (
-                                                <input
-                                                    type="checkbox"
-                                                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                                                    onChange={toggleSelectAll}
-                                                    checked={paginatedLeads.length > 0 && paginatedLeads.every(l => selectedIds.has(l.id))}
-                                                />
-                                            ) : col.label}
-                                        </div>
-                                    )
-                                ))}
-                            </div>
-
-                            {/* Body Rows */}
-                            <div className="divide-y divide-slate-100">
-                                {paginatedLeads.map(lead => {
-                                    const isSelected = selectedIds.has(lead.id);
-
-                                    // Color coding based on urgency
-                                    let borderClass = 'border-transparent';
-                                    let bgClass = '';
-
-                                    if (lead.urgencyStatus === 'high') {
-                                        borderClass = 'border-l-red-500';
-                                        bgClass = 'bg-red-50/10';
-                                    } else if (lead.urgencyStatus === 'medium') {
-                                        borderClass = 'border-l-amber-500';
-                                        bgClass = 'bg-amber-50/10';
-                                    }
-
-                                    return (
+                    <div className="flex flex-col relative rounded-b-2xl overflow-hidden bg-white">
+                        <div className="overflow-x-auto custom-scrollbar">
+                            <div className="min-w-max">
+                                {/* Header (Sticky & Sortable & Draggable) */}
+                                <div
+                                    className="grid gap-0 px-0 bg-white border-b border-l-4 border-transparent border-slate-200 text-[11px] font-bold text-slate-400 uppercase tracking-wider items-center sticky top-0 z-40 shadow-sm"
+                                    style={{ gridTemplateColumns }}
+                                >
+                                    {visibleColumns.map((col, index) => (
                                         <div
-                                            key={lead.id}
-                                            onClick={() => onSelectLead(lead)}
-                                            className={`group hover:bg-blue-50/30 transition-all cursor-pointer relative ${isSelected ? 'bg-blue-50/40' : bgClass}`}
+                                            key={col.id}
+                                            draggable={!col.fixed}
+                                            onDragStart={(e) => handleDragStart(e, index)}
+                                            onDragOver={(e) => handleDragOver(e, index)}
+                                            onDrop={(e) => handleDrop(e, index)}
+                                            onClick={() => col.sortable && handleSort(col.id)}
+                                            className={`group relative flex items-center h-full py-3 px-4 select-none ${!col.fixed ? 'cursor-grab active:cursor-grabbing hover:bg-slate-50' : ''} ${col.sortable ? 'cursor-pointer' : ''} ${col.id === 'actions' ? 'justify-end' : ''}`}
                                         >
-                                            <div
-                                                className={`grid gap-4 px-6 py-4 items-center border-l-4 ${borderClass} hover:border-blue-200`}
-                                                style={{ gridTemplateColumns }}
-                                            >
-                                                {columns.map(col => {
-                                                    if (!col.visible) return null;
+                                            <div className="flex items-center gap-1.5 truncate">
+                                                {col.id === 'select' ? (
+                                                    <input
+                                                        type="checkbox"
+                                                        className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                                        onChange={toggleSelectAll}
+                                                        checked={paginatedLeads.length > 0 && paginatedLeads.every(l => selectedIds.has(l.id))}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    />
+                                                ) : col.label}
 
-                                                    // --- SELECT COLUMN ---
-                                                    if (col.id === 'select') {
-                                                        return (
-                                                            <div key={col.id} onClick={(e) => e.stopPropagation()}>
-                                                                <input
-                                                                    type="checkbox"
-                                                                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                                                                    checked={isSelected}
-                                                                    onChange={() => toggleSelectRow(lead.id)}
-                                                                />
-                                                            </div>
-                                                        );
-                                                    }
-
-                                                    // --- NAME COLUMN ---
-                                                    if (col.id === 'name') {
-                                                        return (
-                                                            <div key={col.id}>
-                                                                <div className="font-bold text-slate-700 group-hover:text-blue-700 transition-colors text-sm">
-                                                                    {lead.name}
-                                                                </div>
-                                                                <div className="text-[11px] text-slate-500 mt-0.5">CEO / Primary</div>
-                                                            </div>
-                                                        );
-                                                    }
-
-                                                    // --- BUSINESS COLUMN ---
-                                                    if (col.id === 'business') {
-                                                        return (
-                                                            <div key={col.id} className="text-sm font-medium text-slate-600 flex items-center gap-1.5">
-                                                                <Briefcase size={12} className="text-slate-400" />
-                                                                {lead.businessName}
-                                                            </div>
-                                                        );
-                                                    }
-
-                                                    // --- OFFICER COLUMN ---
-                                                    if (col.id === 'officer') {
-                                                        return (
-                                                            <div key={col.id} className="flex items-center gap-2">
-                                                                {lead.assignedOfficer !== 'Unassigned' && (
-                                                                    <div className="w-6 h-6 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500">
-                                                                        {lead.assignedOfficer.charAt(0)}
-                                                                    </div>
-                                                                )}
-                                                                <span className="text-xs font-medium text-slate-600">{lead.assignedOfficer}</span>
-                                                            </div>
-                                                        );
-                                                    }
-
-                                                    // --- SOURCE COLUMN ---
-                                                    if (col.id === 'source') {
-                                                        return (
-                                                            <div key={col.id}>
-                                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                                                                    {lead.source}
-                                                                </span>
-                                                            </div>
-                                                        );
-                                                    }
-
-                                                    // --- STAGE COLUMN ---
-                                                    if (col.id === 'stage') {
-                                                        return (
-                                                            <div key={col.id}>
-                                                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold border ${lead.stage === 'New' ? 'bg-sky-50 text-sky-700 border-sky-100' :
-                                                                    lead.stage === 'Contacted' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' :
-                                                                        lead.stage === 'Qualified' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                                                                            lead.stage === 'Converted' ? 'bg-purple-50 text-purple-700 border-purple-100' :
-                                                                                'bg-slate-50 text-slate-600 border-slate-200'
-                                                                    }`}>
-                                                                    {lead.stage}
-                                                                </span>
-                                                            </div>
-                                                        );
-                                                    }
-
-                                                    // --- ACTIVITY COLUMN ---
-                                                    if (col.id === 'lastActivity') {
-                                                        return (
-                                                            <div key={col.id} className="flex items-center gap-1.5 text-xs text-slate-500">
-                                                                <Calendar size={12} />
-                                                                {lead.lastActivity}
-                                                            </div>
-                                                        );
-                                                    }
-
-                                                    // --- ACTIONS COLUMN ---
-                                                    if (col.id === 'actions') {
-                                                        return (
-                                                            <div key={col.id} className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                                                                {/* Chat - Hidden on small screens */}
-                                                                <button
-                                                                    onClick={() => alert(`Open Chat for ${lead.name}`)}
-                                                                    className="hidden xl:flex p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                                    title="Chat"
-                                                                >
-                                                                    <MessageSquare size={16} />
-                                                                </button>
-
-                                                                {/* Email - Hidden on small screens */}
-                                                                <button
-                                                                    onClick={() => alert(`Compose Email to ${lead.name}`)}
-                                                                    className="hidden xl:flex p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                                    title="Email"
-                                                                >
-                                                                    <Mail size={16} />
-                                                                </button>
-
-                                                                {/* More Menu (Click Triggered) */}
-                                                                <div className="relative">
-                                                                    <button
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            setActiveRowMenu(activeRowMenu === lead.id ? null : lead.id);
-                                                                        }}
-                                                                        className={`p-1.5 rounded-lg transition-colors ${activeRowMenu === lead.id ? 'bg-blue-50 text-blue-600' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'}`}
-                                                                    >
-                                                                        <Ellipsis size={16} />
-                                                                    </button>
-
-                                                                    {activeRowMenu === lead.id && (
-                                                                        <>
-                                                                            <div className="fixed inset-0 z-40 cursor-default" onClick={(e) => { e.stopPropagation(); setActiveRowMenu(null); }}></div>
-                                                                            <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-xl z-50 p-1 animate-in fade-in slide-in-from-top-2 duration-200 origin-top-right">
-                                                                                <div className="flex flex-col gap-0.5">
-                                                                                    <button onClick={(e) => { e.stopPropagation(); alert(`Open Chat for ${lead.name}`); setActiveRowMenu(null); }} className="xl:hidden w-full text-left px-2 py-1 text-xs font-medium text-slate-600 hover:bg-blue-50 hover:text-blue-700 rounded flex items-center gap-2">
-                                                                                        <MessageSquare size={13} className="text-slate-400" /> Chat
-                                                                                    </button>
-                                                                                    <button onClick={(e) => { e.stopPropagation(); alert(`Compose Email to ${lead.name}`); setActiveRowMenu(null); }} className="xl:hidden w-full text-left px-2 py-1 text-xs font-medium text-slate-600 hover:bg-blue-50 hover:text-blue-700 rounded flex items-center gap-2">
-                                                                                        <Mail size={13} className="text-slate-400" /> Email
-                                                                                    </button>
-                                                                                    <div className="xl:hidden h-px bg-slate-100 my-0.5"></div>
-                                                                                    <button className="w-full text-left px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 rounded flex items-center gap-2" onClick={() => setActiveRowMenu(null)}>
-                                                                                        <Eye size={13} className="text-slate-400" /> View Lead
-                                                                                    </button>
-                                                                                    <button className="w-full text-left px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 rounded flex items-center gap-2" onClick={() => setActiveRowMenu(null)}>
-                                                                                        <Pencil size={13} className="text-slate-400" /> Edit Lead
-                                                                                    </button>
-                                                                                    <button className="w-full text-left px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 rounded flex items-center gap-2" onClick={() => setActiveRowMenu(null)}>
-                                                                                        <UserCog size={13} className="text-slate-400" /> Reassign LO
-                                                                                    </button>
-                                                                                    <button className="w-full text-left px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 rounded flex items-center gap-2" onClick={() => setActiveRowMenu(null)}>
-                                                                                        <ArrowRightCircle size={13} className="text-slate-400" /> Convert to Loan
-                                                                                    </button>
-                                                                                    <div className="h-px bg-slate-100 my-0.5"></div>
-                                                                                    <button className="w-full text-left px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 rounded flex items-center gap-2" onClick={() => setActiveRowMenu(null)}>
-                                                                                        <Trash2 size={13} className="text-red-400 group-hover:text-red-600" /> Delete Lead
-                                                                                    </button>
-                                                                                </div>
-                                                                            </div>
-                                                                        </>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    }
-
-                                                    // --- DEFAULT / DYNAMIC COLUMNS ---
-                                                    return (
-                                                        <div key={col.id} className="text-sm text-slate-600">
-                                                            {lead[col.id] || '-'}
-                                                        </div>
-                                                    );
-                                                })}
+                                                {/* Sort Indicator */}
+                                                {col.sortable && sortConfig.key === col.id && (
+                                                    <span className="text-blue-600">
+                                                        {sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
+                                                    </span>
+                                                )}
                                             </div>
+
+                                            {/* Resize Handle */}
+                                            {!col.fixed && (
+                                                <div
+                                                    className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 group-hover:bg-slate-200 transition-colors z-10"
+                                                    onMouseDown={(e) => startResize(e, col.id)}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                ></div>
+                                            )}
                                         </div>
-                                    );
-                                })}
+                                    ))}
+                                </div>
+
+                                {/* Body Rows */}
+                                <div className="divide-y divide-slate-100">
+                                    {paginatedLeads.length === 0 ? (
+                                        <div className="p-12 flex flex-col items-center justify-center text-center">
+                                            <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                                                <Search size={24} className="text-slate-400" />
+                                            </div>
+                                            <h3 className="text-slate-900 font-medium mb-1">No leads match your search</h3>
+                                            <p className="text-slate-500 text-sm">Try adjusting your search terms or filters.</p>
+                                            {(searchQuery || activeFilterCount > 0) && (
+                                                <button
+                                                    onClick={() => {
+                                                        setSearchQuery('');
+                                                        setActiveStage('All');
+                                                        if (onUpdateFilters) onUpdateFilters(null);
+                                                    }}
+                                                    className="mt-4 text-blue-600 text-sm font-medium hover:underline"
+                                                >
+                                                    Clear all filters
+                                                </button>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        paginatedLeads.map(lead => {
+                                            const isSelected = selectedIds.has(lead.id);
+
+                                            return (
+                                                <div
+                                                    key={lead.id}
+                                                    onClick={() => onSelectLead(lead)}
+                                                    className={`group hover:bg-slate-50 transition-all cursor-pointer relative border-b border-slate-50 ${isSelected ? 'bg-blue-50/40' : ''}`}
+                                                >
+                                                    <div
+                                                        className={`grid gap-0 items-center px-0 py-3 border-l-4 border-transparent`}
+                                                        style={{ gridTemplateColumns }}
+                                                    >
+                                                        {visibleColumns.map(col => {
+                                                            const cellClass = "px-4 overflow-hidden truncate";
+
+                                                            // --- SELECT COLUMN ---
+                                                            if (col.id === 'select') {
+                                                                return (
+                                                                    <div key={col.id} onClick={(e) => e.stopPropagation()} className={cellClass}>
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                                                            checked={isSelected}
+                                                                            onChange={() => toggleSelectRow(lead.id)}
+                                                                        />
+                                                                    </div>
+                                                                );
+                                                            }
+
+                                                            // --- NAME COLUMN ---
+                                                            if (col.id === 'name') {
+                                                                const initials = lead.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                                                                return (
+                                                                    <div key={col.id} className={`flex items-center gap-3 ${cellClass}`}>
+                                                                        {/* Avatar */}
+                                                                        <AvatarWithPresence
+                                                                            src={lead.avatar}
+                                                                            initials={initials}
+                                                                            name={lead.name}
+                                                                            status={lead.status}
+                                                                            lastActive={lead.lastActive}
+                                                                            size="md"
+                                                                        />
+                                                                        {/* Text Info */}
+                                                                        <div className="flex flex-col min-w-0">
+                                                                            <div className="font-bold text-slate-800 text-sm group-hover:text-blue-700 transition-colors truncate">
+                                                                                {lead.name}
+                                                                            </div>
+                                                                            <div className="text-[11px] text-slate-500 flex items-center gap-1 truncate">
+                                                                                <Mail size={10} className="text-slate-400" />
+                                                                                {lead.email}
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            }
+
+                                                            // --- BUSINESS COLUMN ---
+                                                            if (col.id === 'business') {
+                                                                return (
+                                                                    <div key={col.id} className={`text-sm font-medium text-slate-600 flex items-center gap-1.5 ${cellClass}`}>
+                                                                        <Briefcase size={12} className="text-slate-400 shrink-0" />
+                                                                        <span className="truncate">{lead.businessName}</span>
+                                                                    </div>
+                                                                );
+                                                            }
+
+                                                            // --- OFFICER COLUMN ---
+                                                            if (col.id === 'officer') {
+                                                                return (
+                                                                    <div key={col.id} className={`flex items-center gap-2 ${cellClass}`}>
+                                                                        {lead.assignedOfficer !== 'Unassigned' && (
+                                                                            <div className="w-6 h-6 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500 shrink-0">
+                                                                                {lead.assignedOfficer.charAt(0)}
+                                                                            </div>
+                                                                        )}
+                                                                        <span className="text-xs font-medium text-slate-600 truncate">{lead.assignedOfficer}</span>
+                                                                    </div>
+                                                                );
+                                                            }
+
+                                                            // --- SOURCE COLUMN ---
+                                                            if (col.id === 'source') {
+                                                                return (
+                                                                    <div key={col.id} className={cellClass}>
+                                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                                                                            {lead.source}
+                                                                        </span>
+                                                                    </div>
+                                                                );
+                                                            }
+
+                                                            // --- STAGE COLUMN ---
+                                                            if (col.id === 'stage') {
+                                                                return (
+                                                                    <div key={col.id} className={cellClass}>
+                                                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold border ${lead.stage === 'New' ? 'bg-sky-50 text-sky-700 border-sky-100' :
+                                                                            lead.stage === 'Contacted' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' :
+                                                                                lead.stage === 'Qualified' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                                                                                    lead.stage === 'Converted' ? 'bg-purple-50 text-purple-700 border-purple-100' :
+                                                                                        'bg-slate-50 text-slate-600 border-slate-200'
+                                                                            }`}>
+                                                                            {lead.stage}
+                                                                        </span>
+                                                                    </div>
+                                                                );
+                                                            }
+
+                                                            // --- ACTIVITY COLUMN ---
+                                                            if (col.id === 'lastActivity') {
+                                                                return (
+                                                                    <div key={col.id} className={`flex items-center gap-1.5 text-xs text-slate-500 ${cellClass}`}>
+                                                                        <Calendar size={12} />
+                                                                        {lead.lastActivity}
+                                                                    </div>
+                                                                );
+                                                            }
+
+                                                            // --- ACTIONS COLUMN ---
+                                                            if (col.id === 'actions') {
+                                                                return (
+                                                                    <div key={col.id} className={`flex items-center justify-end gap-1 ${cellClass}`} onClick={(e) => e.stopPropagation()}>
+                                                                        {/* Chat - Hidden on small screens */}
+                                                                        <button
+                                                                            onClick={() => alert(`Open Chat for ${lead.name}`)}
+                                                                            className="hidden xl:flex p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                                            title="Chat"
+                                                                        >
+                                                                            <MessageSquare size={16} />
+                                                                        </button>
+
+                                                                        {/* Email - Hidden on small screens */}
+                                                                        <button
+                                                                            onClick={() => alert(`Compose Email to ${lead.name}`)}
+                                                                            className="hidden xl:flex p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                                            title="Email"
+                                                                        >
+                                                                            <Mail size={16} />
+                                                                        </button>
+
+                                                                        {/* More Menu (Click Triggered) */}
+                                                                        <div className="relative">
+                                                                            <button
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    if (activeRowMenu === lead.id) {
+                                                                                        setActiveRowMenu(null);
+                                                                                    } else {
+                                                                                        const rect = e.currentTarget.getBoundingClientRect();
+                                                                                        setMenuPosition({ top: rect.bottom + window.scrollY, left: rect.right - 160 + window.scrollX }); // 160 is approx menu width
+                                                                                        setActiveRowMenu(lead.id);
+                                                                                    }
+                                                                                }}
+                                                                                className={`p-1.5 rounded-lg transition-colors ${activeRowMenu === lead.id ? 'bg-blue-50 text-blue-600' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'}`}
+                                                                            >
+                                                                                <Ellipsis size={16} />
+                                                                            </button>
+
+                                                                            {activeRowMenu === lead.id && createPortal(
+                                                                                <div className="fixed inset-0 z-[9999]" onClick={(e) => { e.stopPropagation(); setActiveRowMenu(null); }}>
+                                                                                    {/* Positioned Menu */}
+                                                                                    <div
+                                                                                        className="absolute bg-white border border-slate-200 rounded-lg shadow-xl p-1 animate-in fade-in zoom-in-95 duration-200"
+                                                                                        style={{ top: `${menuPosition.top + 4}px`, left: `${menuPosition.left}px`, width: '160px' }}
+                                                                                        onClick={(e) => e.stopPropagation()}
+                                                                                    >
+                                                                                        <div className="flex flex-col gap-0.5">
+                                                                                            <button onClick={(e) => { e.stopPropagation(); alert(`Open Chat for ${lead.name}`); setActiveRowMenu(null); }} className="xl:hidden w-full text-left px-2 py-1 text-xs font-medium text-slate-600 hover:bg-blue-50 hover:text-blue-700 rounded flex items-center gap-2">
+                                                                                                <MessageSquare size={13} className="text-slate-400" /> Chat
+                                                                                            </button>
+                                                                                            <button onClick={(e) => { e.stopPropagation(); alert(`Compose Email to ${lead.name}`); setActiveRowMenu(null); }} className="xl:hidden w-full text-left px-2 py-1 text-xs font-medium text-slate-600 hover:bg-blue-50 hover:text-blue-700 rounded flex items-center gap-2">
+                                                                                                <Mail size={13} className="text-slate-400" /> Email
+                                                                                            </button>
+                                                                                            <div className="xl:hidden h-px bg-slate-100 my-0.5"></div>
+                                                                                            <button className="w-full text-left px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 rounded flex items-center gap-2" onClick={() => setActiveRowMenu(null)}>
+                                                                                                <Eye size={13} className="text-slate-400" /> View Lead
+                                                                                            </button>
+                                                                                            <button className="w-full text-left px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 rounded flex items-center gap-2" onClick={() => setActiveRowMenu(null)}>
+                                                                                                <Pencil size={13} className="text-slate-400" /> Edit Lead
+                                                                                            </button>
+                                                                                            <button className="w-full text-left px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 rounded flex items-center gap-2" onClick={() => setActiveRowMenu(null)}>
+                                                                                                <UserCog size={13} className="text-slate-400" /> Reassign LO
+                                                                                            </button>
+                                                                                            <button className="w-full text-left px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 rounded flex items-center gap-2" onClick={() => setActiveRowMenu(null)}>
+                                                                                                <ArrowRightCircle size={13} className="text-slate-400" /> Convert to Loan
+                                                                                            </button>
+                                                                                            <div className="h-px bg-slate-100 my-0.5"></div>
+                                                                                            <button className="w-full text-left px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 rounded flex items-center gap-2" onClick={() => setActiveRowMenu(null)}>
+                                                                                                <Trash2 size={13} className="text-red-400 group-hover:text-red-600" /> Delete Lead
+                                                                                            </button>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>,
+                                                                                document.body
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            }
+
+                                                            // --- DEFAULT / DYNAMIC COLUMNS ---
+                                                            return (
+                                                                <div key={col.id} className={`text-sm text-slate-600 ${cellClass}`}>
+                                                                    {lead[col.id] || '-'}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+
+                                </div>
                             </div>
-
-                            {/* Pagination Footer */}
-                            <Pagination
-                                currentPage={currentPage}
-                                totalItems={filteredAndSortedLeads.length}
-                                itemsPerPage={itemsPerPage}
-                                onPageChange={setCurrentPage}
-                                onItemsPerPageChange={(newLimit) => {
-                                    setItemsPerPage(newLimit);
-                                    setCurrentPage(1);
-                                }}
-                            />
-
-
                         </div>
+
+                        {/* Pagination Footer */}
+                        <Pagination
+                            currentPage={currentPage}
+                            totalItems={filteredAndSortedLeads.length}
+                            itemsPerPage={itemsPerPage}
+                            onPageChange={setCurrentPage}
+                            onItemsPerPageChange={(newLimit) => {
+                                setItemsPerPage(newLimit);
+                                setCurrentPage(1);
+                            }}
+                        />
+
+
+
+
                     </div>
                 </div>
             </div>

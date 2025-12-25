@@ -5,7 +5,15 @@ import {
     Bell, Database, ChevronRight, ArrowLeft
 } from 'lucide-react';
 
-const AdminSidebar = ({ activeSection, onSelectSection, onBack }) => {
+const AdminSidebar = ({ activeSection, onSelectSection, onBack, userRole = 'ORG_ADMIN' }) => {
+    // Role definitions for clarity
+    const ROLES = {
+        ORG_ADMIN: 'ORG_ADMIN',
+        FINANCE_ADMIN: 'FINANCE_ADMIN',
+        CAPITAL_MARKETS: 'CAPITAL_MARKETS',
+        LO: 'LO' // Loan Officer
+    };
+
     const categories = [
         {
             title: 'Organization',
@@ -13,6 +21,17 @@ const AdminSidebar = ({ activeSection, onSelectSection, onBack }) => {
                 { id: 'general', label: 'General Settings', icon: Settings },
                 { id: 'users', label: 'Users & Permissions', icon: Users },
                 { id: 'audit', label: 'Audit Logs', icon: Database }
+            ]
+        },
+        {
+            title: 'Capital Management',
+            roles: [ROLES.ORG_ADMIN, ROLES.FINANCE_ADMIN, ROLES.CAPITAL_MARKETS],
+            items: [
+                { id: 'capital-dashboard', label: 'Capital Impact Dashboards', icon: Activity },
+                { id: 'funders', label: 'Funders & Investors', icon: Users },
+                { id: 'capital-commitments', label: 'Capital Commitments', icon: Database },
+                { id: 'funds-pools', label: 'Funds & Pools', icon: Database },
+                { id: 'allocation-rules', label: 'Allocation Rules', icon: Workflow }
             ]
         },
         {
@@ -41,6 +60,11 @@ const AdminSidebar = ({ activeSection, onSelectSection, onBack }) => {
         }
     ];
 
+    const hasPermission = (requiredRoles) => {
+        if (!requiredRoles) return true; // No specific roles required -> visible to all
+        return requiredRoles.includes(userRole);
+    };
+
     return (
         <div className="w-64 bg-slate-50 border-r border-slate-200 h-full flex flex-col animate-in slide-in-from-left duration-300">
             {/* Back Navigation Header */}
@@ -63,34 +87,38 @@ const AdminSidebar = ({ activeSection, onSelectSection, onBack }) => {
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-6">
-                {categories.map((group) => (
-                    <div key={group.title}>
-                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 px-2">
-                            {group.title}
-                        </h3>
-                        <div className="space-y-0.5">
-                            {group.items.map((item) => {
-                                const isActive = activeSection === item.id;
-                                return (
-                                    <button
-                                        key={item.id}
-                                        onClick={() => onSelectSection(item.id)}
-                                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive
-                                            ? 'bg-white text-blue-600 shadow-sm ring-1 ring-slate-200'
-                                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                                            }`}
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <item.icon size={16} className={isActive ? 'text-blue-500' : 'text-slate-400'} />
-                                            {item.label}
-                                        </div>
-                                        {isActive && <ChevronRight size={14} className="text-blue-500" />}
-                                    </button>
-                                );
-                            })}
+                {categories.map((group) => {
+                    if (!hasPermission(group.roles)) return null;
+
+                    return (
+                        <div key={group.title}>
+                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 px-2">
+                                {group.title}
+                            </h3>
+                            <div className="space-y-0.5">
+                                {group.items.map((item) => {
+                                    const isActive = activeSection === item.id;
+                                    return (
+                                        <button
+                                            key={item.id}
+                                            onClick={() => onSelectSection(item.id)}
+                                            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive
+                                                ? 'bg-white text-blue-600 shadow-sm ring-1 ring-slate-200'
+                                                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                                                }`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <item.icon size={16} className={isActive ? 'text-blue-500' : 'text-slate-400'} />
+                                                {item.label}
+                                            </div>
+                                            {isActive && <ChevronRight size={14} className="text-blue-500" />}
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
 
             <div className="p-4 border-t border-slate-200 bg-white">

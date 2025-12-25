@@ -17,9 +17,11 @@ import AdminPanel from './components/Admin/AdminPanel';
 import { Plus, LayoutGrid, BarChart3 } from 'lucide-react';
 
 function App() {
+  console.log('App rendering');
   const [activeTab, setActiveTabOriginal] = useState('dashboard');
   const [previousTab, setPreviousTab] = useState(null);
   const [selectedLeadId, setSelectedLeadId] = useState(null);
+  const [userRole, setUserRole] = useState('ORG_ADMIN'); // Mock Role: ORG_ADMIN, FINANCE_ADMIN, CAPITAL_MARKETS, LO
   const [selectedAccount, setSelectedAccount] = useState(null); // New state for account context
   const [selectedLoanDetail, setSelectedLoanDetail] = useState(null); // Lifted state for Loan Detail persistence
 
@@ -200,13 +202,15 @@ function App() {
       source: 'Referral',
       stage: 'New',
       assignedOfficer: 'Sarah M',
-      lastActivity: 'Dec 3',
+      status: 'online',
+      lastActive: 'Now',
       email: 'sarah@jenkinscatering.com',
       phone: '(555) 123-4567',
       createdDate: 'Nov 24, 2023',
       urgencyStatus: 'track',
       value: '$50,000',
-      company: 'Jenkins Catering'
+      company: 'Jenkins Catering',
+      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150&h=150'
     },
     {
       id: 'LD-002',
@@ -215,13 +219,15 @@ function App() {
       source: 'Web Form',
       stage: 'Contacted',
       assignedOfficer: 'Alex Morgan',
-      lastActivity: 'Dec 1',
+      status: 'busy',
+      lastActive: '10m ago',
       email: 'mike@rosslegal.com',
       phone: '(555) 987-6543',
       createdDate: 'Nov 20, 2023',
       urgencyStatus: 'medium',
       value: '$120,000',
-      company: 'Ross Legal'
+      company: 'Ross Legal',
+      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150&h=150'
     },
     {
       id: 'LD-003',
@@ -236,7 +242,8 @@ function App() {
       createdDate: 'Nov 15, 2023',
       urgencyStatus: 'high',
       value: '$350,000',
-      company: 'Miller Construction'
+      company: 'Miller Construction',
+      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=150&h=150'
     },
     {
       id: 'LD-004',
@@ -245,13 +252,15 @@ function App() {
       source: 'Existing Client',
       stage: 'New',
       assignedOfficer: 'Sarah M',
-      lastActivity: 'Today',
+      status: 'dnd',
+      lastActive: '1h ago',
       email: 'elena@fisherdesign.com',
       phone: '(555) 222-3333',
       createdDate: 'Dec 05, 2023',
       urgencyStatus: 'track',
       value: '$80,000',
-      company: 'Fisher Design'
+      company: 'Fisher Design',
+      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=150&h=150'
     }
   ]);
 
@@ -278,6 +287,7 @@ function App() {
           isPinned={isSidebarPinned}
           onTogglePin={() => setIsSidebarPinned(!isSidebarPinned)}
           className="static h-full"
+          userRole={userRole}
         />
       </div>
 
@@ -305,7 +315,7 @@ function App() {
           ) : (activeTab === 'contact-detail' || activeTab === 'contacts') ? (
             <ContactDetail onBack={handleBackFromDetail} initialContactName={selectedAccount?.name} />
           ) : activeTab === 'admin' ? (
-            <AdminPanel onBack={() => setActiveTab('dashboard')} />
+            <AdminPanel onBack={() => setActiveTab('dashboard')} userRole={userRole} />
           ) : activeTab === 'account-360' ? (
             <Account360 onBack={() => setActiveTab('accounts')} initialAccount={selectedAccount} />
           ) : activeTab === 'create-lead' ? (
@@ -396,36 +406,30 @@ function App() {
                       )}
                     </section>
 
-                    {/* Recent Leads Section - Hide in Analytics mode */}
-                    {activeLoansView === 'grid' && (
-                      <section className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-                        <div className="flex justify-between items-center mb-4">
-                          <h3 className="text-lg font-bold text-slate-800">Recent Leads</h3>
-                          <a href="#" className="text-sm text-blue-600 font-medium hover:underline">View All</a>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {leads.map(lead => (
-                            <LeadCard key={lead.id} lead={lead} />
-                          ))}
-                        </div>
-                      </section>
-                    )}
-
+                    {/* Insights & Actions (Previously below, now part of flow) */}
+                    {/* Could add a separate section here if needed */}
                   </div>
 
-                  {/* Right Column: Widgets - Hide in Analytics mode */}
-                  {activeLoansView === 'grid' && (
-                    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-                      <div className="sticky top-6 space-y-6">
+                  {/* Right Sidebar - Widgets */}
+                  <div className="space-y-8">
+                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                      <h3 className="font-bold text-slate-800 mb-4">Notifications</h3>
+                      <NotificationsWidget notifications={selectedLoan.notifications || []} />
+                    </div>
+
+                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                      <h3 className="font-bold text-slate-800 mb-4">Task Engine</h3>
+                      {selectedLoan ? (
                         <TaskEngineWidget
                           steps={selectedLoan.steps}
-                          loanId={selectedLoan.id}
-                          onComplete={handleCompleteTask}
+                          currentStep={selectedLoan.currentStep}
+                          onCompleteTask={handleCompleteTask}
                         />
-                        <NotificationsWidget notifications={selectedLoan.notifications} />
-                      </div>
+                      ) : (
+                        <div className="text-sm text-slate-500">Select a loan to view tasks</div>
+                      )}
                     </div>
-                  )}
+                  </div>
 
                 </div>
               </div>

@@ -183,8 +183,12 @@ const LeadBorrowerSnapshot = ({ data, contact }) => {
                         </div>
 
                         <div className="flex items-start gap-4">
-                            <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-lg border border-white shadow-sm shrink-0 relative">
-                                {contact.name ? contact.name.slice(0, 1) : <User size={20} />}
+                            <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-lg border border-white shadow-sm shrink-0 relative overflow-hidden">
+                                {contact.avatar ? (
+                                    <img src={contact.avatar} alt={contact.name} className="w-full h-full object-cover" />
+                                ) : (
+                                    contact.name ? contact.name.slice(0, 1) : <User size={20} />
+                                )}
                                 <div className="absolute -bottom-1 -right-1 bg-green-500 w-3 h-3 rounded-full border-2 border-white"></div>
                             </div>
                             <div className="flex-1 min-w-0">

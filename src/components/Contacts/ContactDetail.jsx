@@ -26,6 +26,7 @@ const ContactDetail = ({ onBack, initialContactName }) => {
             yearsOwnership: 5,
             isPrimaryOwner: true,
             isPrimaryContact: true,
+            avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150&h=150',
             // Other Business
             otherBusinessOwnership: true,
             otherBusPercentage_owner1: 45,
@@ -44,7 +45,7 @@ const ContactDetail = ({ onBack, initialContactName }) => {
             homeAddress: '123 Maple Dr, Detroit, MI 48201',
             demographicSource: 'Applicant Provided',
             lmiHouseholdStatus: 'Middle',
-            creditScore: 720,
+
             creditReportDate: '2023-11-15',
             creditScoreRange: '640-740',
             creditPullConsentTimestamp: '2023-01-15T10:00:00',
@@ -79,7 +80,8 @@ const ContactDetail = ({ onBack, initialContactName }) => {
             creditScore: '710',
             income: '$80k-$100k',
             dob: '1982-11-05',
-            ssn: '***-**-5678'
+            ssn: '***-**-5678',
+            avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150&h=150'
         },
         {
             id: 'C-103',
@@ -106,7 +108,8 @@ const ContactDetail = ({ onBack, initialContactName }) => {
             creditScore: '750',
             income: '$60k-$80k',
             dob: '1978-03-22',
-            ssn: '***-**-9012'
+            ssn: '***-**-9012',
+            avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=150&h=150'
         },
         {
             id: 'C-104',
@@ -133,7 +136,8 @@ const ContactDetail = ({ onBack, initialContactName }) => {
             creditScore: '800',
             income: '$200k+',
             dob: '1970-07-15',
-            ssn: '***-**-3456'
+            ssn: '***-**-3456',
+            avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=150&h=150'
         },
         {
             id: 'C-105',
@@ -315,8 +319,14 @@ const ContactDetail = ({ onBack, initialContactName }) => {
                         <ArrowLeft size={12} /> Back to Account
                     </button>
                     <div className="flex items-center gap-5">
-                        <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-100 to-indigo-50 border-2 border-white shadow-sm flex items-center justify-center text-blue-700 font-bold text-xl">
-                            {contact.firstName?.[0]}{contact.lastName?.[0]}
+                        <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-100 to-indigo-50 border-2 border-white shadow-sm flex items-center justify-center text-blue-700 font-bold text-xl overflow-hidden shrink-0">
+                            {contact.avatar ? (
+                                <img src={contact.avatar} alt={contact.firstName} className="w-full h-full object-cover" />
+                            ) : (
+                                <>
+                                    {contact.firstName?.[0]}{contact.lastName?.[0]}
+                                </>
+                            )}
                         </div>
                         <div>
                             <div className="flex items-center gap-3">
@@ -432,8 +442,12 @@ const ContactDetail = ({ onBack, initialContactName }) => {
                                     >
                                         <div className="flex justify-between items-start mb-1">
                                             <div className="flex items-center gap-2">
-                                                <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs font-bold group-hover:bg-white group-hover:text-blue-600 transition-colors">
-                                                    {oc.firstName?.[0]}{oc.lastName?.[0]}
+                                                <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs font-bold group-hover:bg-white group-hover:text-blue-600 transition-colors overflow-hidden">
+                                                    {oc.avatar ? (
+                                                        <img src={oc.avatar} alt={oc.firstName} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <>{oc.firstName?.[0]}{oc.lastName?.[0]}</>
+                                                    )}
                                                 </div>
                                                 <div>
                                                     <div className="text-sm font-bold text-slate-900 group-hover:text-blue-700 transition-colors">

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
     Activity, AlertTriangle, CheckCircle2, FileText,
     TrendingUp, TrendingDown, DollarSign, ShieldAlert,
-    UserCheck, Clock, CheckSquare, AlertOctagon, Info
+    UserCheck, Clock, CheckSquare, AlertOctagon, Info, Layers
 } from 'lucide-react';
 
 const UnderwritingTab = ({ loan }) => {
@@ -61,6 +61,17 @@ const UnderwritingTab = ({ loan }) => {
             reviewer: 'Sarah Jenkins',
             approver: 'Credit Committee (Level 2)',
             date: 'Dec 06, 2023 14:30 EST'
+        },
+        capital: {
+            allocations: [
+                { fund: 'Affordable Housing Fund I', percentage: 60 },
+                { fund: 'Green Energy Catalyst', percentage: 40 }
+            ],
+            economics: {
+                borrowerRate: 4.5,
+                effectiveCost: 5.25,
+                margin: -0.75, // Negative margin = Subsidy
+            }
         }
     });
 
@@ -128,6 +139,111 @@ const UnderwritingTab = ({ loan }) => {
                                 </div>
                             </div>
                         ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* 2.5 CAPITAL ECONOMICS (NEW) */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                    <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                        <DollarSign size={18} className="text-slate-500" />
+                        Capital Economics
+                    </h2>
+                    <span className="text-xs font-medium text-slate-500 bg-white border border-slate-200 px-2 py-1 rounded">
+                        Internal View Only
+                    </span>
+                </div>
+                <div className="p-0 flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-slate-100">
+                    {/* LEFT: ALLOCATION */}
+                    <div className="flex-1 p-6">
+                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                            <Layers size={14} /> Capital Allocation
+                        </h3>
+                        <div className="space-y-3">
+                            {decisionData.capital.allocations.map((alloc, idx) => (
+                                <div key={idx} className="flex justify-between items-center">
+                                    <div className="flex items-center gap-2">
+                                        <div className={`w-2 h-2 rounded-full ${idx === 0 ? 'bg-blue-500' : 'bg-green-500'}`}></div>
+                                        <span className="text-sm font-medium text-slate-700">{alloc.fund}</span>
+                                    </div>
+                                    <span className="text-sm font-bold text-slate-900">{alloc.percentage}%</span>
+                                </div>
+                            ))}
+                            <div className="pt-3 mt-3 border-t border-slate-100 flex justify-between items-center">
+                                <span className="text-xs text-slate-500">Total Funding</span>
+                                <span className="text-xs font-bold text-slate-700">100%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* RIGHT: ECONOMICS */}
+                    <div className="flex-1 p-6 bg-slate-50/50">
+                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                            <Activity size={14} /> Economic Impact
+                        </h3>
+                        <div className="grid grid-cols-3 gap-6">
+                            <div>
+                                <div className="text-xs text-slate-500 mb-1">Borrower Rate</div>
+                                <div className="text-xl font-bold text-slate-900 font-mono">
+                                    {decisionData.capital.economics.borrowerRate.toFixed(2)}%
+                                </div>
+                            </div>
+                            <div>
+                                <div className="text-xs text-slate-500 mb-1">Effective Cost</div>
+                                <div className="text-xl font-bold text-slate-600 font-mono">
+                                    {decisionData.capital.economics.effectiveCost.toFixed(2)}%
+                                </div>
+                            </div>
+                            <div className="relative">
+                                {/* Vertical Divider */}
+                                <div className="absolute -left-3 top-1 bottom-1 w-px bg-slate-200"></div>
+                                <div className="text-xs text-slate-500 mb-1">Net Margin</div>
+                                <div className={`text-xl font-bold font-mono ${decisionData.capital.economics.margin > 0
+                                    ? 'text-emerald-600'
+                                    : decisionData.capital.economics.margin > -2.0
+                                        ? 'text-amber-600'
+                                        : 'text-red-600'
+                                    }`}>
+                                    {decisionData.capital.economics.margin > 0 ? '+' : ''}
+                                    {decisionData.capital.economics.margin.toFixed(2)}%
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Status Strip */}
+                        <div className="mt-5">
+                            {decisionData.capital.economics.margin < 0 ? (
+                                <div className={`p-3 rounded-lg border flex items-start gap-3 ${decisionData.capital.economics.margin < -2.0
+                                    ? 'bg-red-50 border-red-100'
+                                    : 'bg-amber-50 border-amber-100'
+                                    }`}>
+                                    <TrendingDown size={16} className={
+                                        decisionData.capital.economics.margin < -2.0 ? 'text-red-600' : 'text-amber-600'
+                                    } />
+                                    <div>
+                                        <div className={`text-xs font-bold ${decisionData.capital.economics.margin < -2.0 ? 'text-red-800' : 'text-amber-800'
+                                            }`}>
+                                            Subsidized Loan
+                                        </div>
+                                        <div className={`text-[10px] mt-0.5 ${decisionData.capital.economics.margin < -2.0 ? 'text-red-700' : 'text-amber-700'
+                                            }`}>
+                                            Borrower rate is below cost of capital. Approved as Impact Investment.
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="p-3 rounded-lg border bg-emerald-50 border-emerald-100 flex items-start gap-3">
+                                    <TrendingUp size={16} className="text-emerald-600" />
+                                    <div>
+                                        <div className="text-xs font-bold text-emerald-800">Positive Margin</div>
+                                        <div className="text-[10px] text-emerald-700 mt-0.5">
+                                            Loan is accretive to fund sustainability.
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
