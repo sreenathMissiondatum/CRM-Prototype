@@ -307,7 +307,9 @@ const LeadSummaryView = ({ lead, assignedPrograms = [], onUpdateAssignedPrograms
                             email: data.email,
                             preferredMethod: data.preferredContact,
                             creditRange: data.creditScore,
-                            avatar: data.avatar
+                            avatar: data.avatar,
+                            status: data.status,
+                            lastActive: data.lastActive
                         }}
                     />
 
