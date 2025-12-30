@@ -10,9 +10,11 @@ import {
 import AccountLeadsTab from './AccountLeadsTab';
 import AccountLoansTab from './AccountLoansTab';
 import AccountContactsTab from './AccountContactsTab';
-import AccountFinancialsTab from './AccountFinancialsTab'; // [NEW] Financials
+import AccountFinancialsTab from './AccountFinancialsTab';
+import FinancialIntelligence from './FinancialIntelligence'; // [NEW] Intelligence View
 
-import AccountDocumentsTab from './AccountDocumentsTab';
+
+
 import AccountActivitiesTab from './AccountActivitiesTab';
 import AccountTATab from './AccountTATab';
 import AccountAuditTab from './AccountAuditTab';
@@ -87,7 +89,8 @@ const AccountDetail = ({ onBack, initialAccount, onOpen360 }) => {
     const tabs = [
         { id: 'overview', label: 'Overview' },
         { id: 'leads', label: 'Leads' },
-        { id: 'financials', label: 'Financials' }, // [NEW]
+        { id: 'financials', label: 'Financials' },
+        { id: 'fin_intelligence', label: 'Financial Intelligence' }, // [NEW]
         { id: 'loans', label: 'Loans' },
         { id: 'contacts', label: 'Contacts' },
         { id: 'documents', label: 'Documents' },
@@ -328,6 +331,11 @@ const AccountDetail = ({ onBack, initialAccount, onOpen360 }) => {
                 {/* [NEW] Financials Tab */}
                 {activeTab === 'financials' && (
                     <AccountFinancialsTab />
+                )}
+
+                {/* [NEW] Financial Intelligence Tab */}
+                {activeTab === 'fin_intelligence' && (
+                    <FinancialIntelligence />
                 )}
 
                 {activeTab === 'loans' && (

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Bell, Search, User } from 'lucide-react';
 
-const Header = () => {
+const Header = ({ onNavigate }) => {
     return (
         <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 pl-28 sticky top-0 z-50">
             <div>
@@ -26,7 +26,10 @@ const Header = () => {
                     <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
                 </button>
 
-                <div className="flex items-center gap-3 pl-6 border-l border-slate-200">
+                <div
+                    className="flex items-center gap-3 pl-6 border-l border-slate-200 cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => onNavigate && onNavigate('profile')}
+                >
                     <div className="text-right hidden sm:block">
                         <p className="text-sm font-medium text-slate-900">Alex Morgan</p>
                         <p className="text-xs text-slate-500">Loan Officer</p>

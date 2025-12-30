@@ -14,6 +14,7 @@ import LoanProgramsList from './components/LoanPrograms/LoanProgramsList';
 import AccountsList from './components/Accounts/AccountsList';
 import Account360 from './components/Accounts/Account360';
 import AdminPanel from './components/Admin/AdminPanel';
+import UserProfile from './components/User/UserProfile';
 import { Plus, LayoutGrid, BarChart3 } from 'lucide-react';
 
 function App() {
@@ -217,7 +218,7 @@ function App() {
       name: 'Mike Ross',
       businessName: 'Ross Legal',
       source: 'Web Form',
-      stage: 'Contacted',
+      stage: 'Attempting Contact',
       assignedOfficer: 'Alex Morgan',
       status: 'busy',
       lastActive: '10m ago',
@@ -273,6 +274,36 @@ function App() {
     console.log(`Marking task ${taskId} as done`);
   };
 
+  const handleImportLeads = (newLeads) => {
+    const formattedLeads = newLeads.map((l, i) => ({
+      id: `LD-IMP-${Date.now()}-${i}`,
+      name: `${l.firstName} ${l.lastName}`,
+      businessName: l.businessName || 'N/A',
+      source: l.source || 'Import',
+      stage: 'New',
+      assignedOfficer: 'Unassigned',
+      status: 'offline',
+      lastActive: 'Just now',
+      email: l.email,
+      phone: l.phone || '',
+      createdDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      urgencyStatus: 'low',
+      value: '-',
+      company: l.businessName || 'N/A',
+      avatar: null
+    }));
+    setLeads(prev => [...formattedLeads, ...prev]);
+  };
+
+  const handleBulkUpdateLeads = (ids, updates) => {
+    setLeads(prev => prev.map(lead => {
+      if (ids.includes(lead.id)) {
+        return { ...lead, ...updates };
+      }
+      return lead;
+    }));
+  };
+
   // Sidebar State
   const [isSidebarPinned, setIsSidebarPinned] = useState(false);
   const isAdminMode = activeTab === 'admin';
@@ -295,7 +326,7 @@ function App() {
         className={`flex-1 flex flex-col transition-all duration-300 ease-in-out h-screen overflow-hidden ${isAdminMode ? 'ml-0' : (isSidebarPinned ? 'ml-64' : 'ml-20')
           }`}
       >
-        <Header />
+        <Header onNavigate={setActiveTab} />
 
         <div className="relative flex-1 flex flex-col min-h-0">
           {activeTab === 'loan-programs' ? (
@@ -316,6 +347,10 @@ function App() {
             <ContactDetail onBack={handleBackFromDetail} initialContactName={selectedAccount?.name} />
           ) : activeTab === 'admin' ? (
             <AdminPanel onBack={() => setActiveTab('dashboard')} userRole={userRole} />
+          ) : activeTab === 'profile' ? (
+            <div className="h-full overflow-y-auto">
+              <UserProfile />
+            </div>
           ) : activeTab === 'account-360' ? (
             <Account360 onBack={() => setActiveTab('accounts')} initialAccount={selectedAccount} />
           ) : activeTab === 'create-lead' ? (
@@ -342,6 +377,8 @@ function App() {
               onSelectLead={setSelectedLeadId}
               currentFilters={leadFilters}
               onUpdateFilters={setLeadFilters}
+              onImportLeads={handleImportLeads}
+              onBulkUpdate={handleBulkUpdateLeads}
             />
           ) : (
             <div className="h-full overflow-y-auto">

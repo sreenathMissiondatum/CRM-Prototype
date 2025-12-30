@@ -17,6 +17,8 @@ import ReadinessChecklistDrawer from './ReadinessChecklistDrawer';
 import SelectedProgramCard from '../LoanPrograms/SelectedProgramCard';
 import RequiredDocumentsModal from '../LoanPrograms/RequiredDocumentsModal';
 import ProgramDetailsDrawer from '../LoanPrograms/ProgramDetailsDrawer';
+import LeadEligibilityTile from './LeadEligibilityTile';
+import EligibilityExplanationPanel from './EligibilityExplanationPanel';
 
 const LeadSummaryView = ({ lead, assignedPrograms = [], onUpdateAssignedPrograms, onViewAccount, onViewContact, onLogActivity }) => {
     // Enhanced Mock Data (merged with prop)
@@ -54,6 +56,7 @@ const LeadSummaryView = ({ lead, assignedPrograms = [], onUpdateAssignedPrograms
 
     // AI Score State
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+    const [isEligibilityPanelOpen, setIsEligibilityPanelOpen] = useState(false);
     const [scoreData, setScoreData] = useState({
         score: 78,
         band: 'Low',
@@ -225,7 +228,10 @@ const LeadSummaryView = ({ lead, assignedPrograms = [], onUpdateAssignedPrograms
         <div className="space-y-6 animate-in fade-in duration-500">
             {/* 1. Readiness Strip & Score Card */}
             <div className="grid grid-cols-5 gap-4">
-                <ReadinessCard label="Eligibility" value={data.eligibility} status="success" />
+                <LeadEligibilityTile
+                    status={data.eligibility}
+                    onClick={() => setIsEligibilityPanelOpen(true)}
+                />
                 <ReadinessCard label="Documents" value={data.docStatus} status="warning" />
                 <ReadinessCard label="TA Needed" value={data.taNeeded} status="neutral" />
                 <ReadinessCard label="Mission Fit" value={data.missionFit} status="success" />
@@ -275,6 +281,12 @@ const LeadSummaryView = ({ lead, assignedPrograms = [], onUpdateAssignedPrograms
                 onClose={() => setIsDrawerOpen(false)}
                 scoreData={scoreData}
                 onReRun={handleReRunScore}
+            />
+
+            <EligibilityExplanationPanel
+                isOpen={isEligibilityPanelOpen}
+                onClose={() => setIsEligibilityPanelOpen(false)}
+                data={data}
             />
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">

@@ -325,11 +325,14 @@ const Sidebar = ({ active, onNavigate, isPinned, onTogglePin, className, userRol
                     </button>
                 </div>
 
-                <div className={twMerge(
-                    "mt-4 pt-4 border-t border-slate-800/50 flex items-center gap-3 transition-opacity duration-200",
-                    isExpanded ? "px-2 opacity-100" : "px-0 justify-center opacity-100" // Keep avatar visible
-                )}>
-                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shadow-md shrink-0 overflow-hidden border border-slate-600">
+                <button
+                    onClick={() => onNavigate('profile')}
+                    className={twMerge(
+                        "mt-4 pt-4 border-t border-slate-800/50 flex items-center gap-3 transition-opacity duration-200 w-full text-left hover:bg-slate-800/30 rounded-lg p-2 group/profile",
+                        isExpanded ? "px-2 opacity-100" : "px-0 justify-center opacity-100" // Keep avatar visible
+                    )}
+                >
+                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shadow-md shrink-0 overflow-hidden border border-slate-600 group-hover/profile:border-slate-400 transition-colors">
                         <img
                             src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=150&h=150"
                             alt="Alex Morgan"
@@ -338,11 +341,11 @@ const Sidebar = ({ active, onNavigate, isPinned, onTogglePin, className, userRol
                     </div>
                     {isExpanded && (
                         <div className="flex flex-col overflow-hidden transition-all duration-300 animate-in fade-in">
-                            <span className="text-sm font-semibold text-slate-200">Alex Morgan</span>
-                            <span className="text-[10px] text-slate-500">Admin</span>
+                            <span className="text-sm font-semibold text-slate-200 group-hover/profile:text-white transition-colors">Alex Morgan</span>
+                            <span className="text-[10px] text-slate-500 group-hover/profile:text-slate-400 transition-colors">Admin</span>
                         </div>
                     )}
-                </div>
+                </button>
             </div>
         </div>
     );

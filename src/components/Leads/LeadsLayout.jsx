@@ -12,7 +12,9 @@ const LeadsLayout = ({
     selectedLeadId,
     onSelectLead,
     currentFilters,
-    onUpdateFilters
+    onUpdateFilters,
+    onImportLeads,
+    onBulkUpdate
 }) => {
     // Current user context (mock)
     const currentUser = { name: 'Alex Morgan' };
@@ -37,6 +39,8 @@ const LeadsLayout = ({
                         compact={false}
                         currentFilters={currentFilters}
                         onUpdateFilters={onUpdateFilters}
+                        onImportLeads={onImportLeads}
+                        onBulkUpdate={onBulkUpdate}
                     />
                 </div>
             ) : (

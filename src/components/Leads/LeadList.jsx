@@ -13,10 +13,15 @@ import {
 import AvatarWithPresence from '../Shared/AvatarWithPresence';
 import { createPortal } from 'react-dom';
 import LeadFilterDrawer from './LeadFilterDrawer';
+import ImportLeadsModal from './ImportLeadsModal';
+import BulkUpdateModal from './BulkUpdateModal';
+import { downloadLeadTemplate } from '../../utils/leadTemplateUtils';
 
-const LeadList = ({ leads, selectedLeadId, onSelectLead, onCreateLead, compact, currentFilters, onUpdateFilters }) => {
+const LeadList = ({ leads, selectedLeadId, onSelectLead, onCreateLead, compact, currentFilters, onUpdateFilters, onImportLeads, onBulkUpdate }) => {
     // State
     const [activeStage, setActiveStage] = useState('All');
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false); // Import Modal State
+    const [isBulkUpdateModalOpen, setIsBulkUpdateModalOpen] = useState(false); // Bulk Update Modal State
     const [isColumnMenuOpen, setIsColumnMenuOpen] = useState(false);
     const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
     const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
@@ -44,7 +49,7 @@ const LeadList = ({ leads, selectedLeadId, onSelectLead, onCreateLead, compact, 
         { id: 'actions', label: 'Actions', visible: true, width: 110, fixed: true, sortable: false }
     ]);
 
-    const stages = ['All', 'New', 'Contacted', 'Qualified', 'Converted', 'Disqualified', 'Nurture', 'Lost', 'On Hold']; // Added more to test scroll
+    const stages = ['All', 'New', 'Attempting Contact', 'Pre-Screening', 'Hold', 'Nurturing', 'Qualified', 'Adverse Action', 'Cold', 'Unqualified', 'Converted'];
 
     // Helper functions
     const toggleColumn = (id) => {
@@ -398,22 +403,54 @@ const LeadList = ({ leads, selectedLeadId, onSelectLead, onCreateLead, compact, 
                                 <>
                                     <div className="fixed inset-0 z-10" onClick={() => setIsMoreMenuOpen(false)}></div>
                                     <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-slate-200 rounded-lg shadow-xl z-20 p-1 animate-in fade-in slide-in-from-top-2 duration-200 origin-top-right">
-                                        <button className="w-full text-left px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 rounded transition-colors flex items-center gap-3">
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setIsImportModalOpen(true);
+                                                setIsMoreMenuOpen(false);
+                                            }}
+                                            className="w-full text-left px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 rounded transition-colors flex items-center gap-3"
+                                        >
                                             <Upload size={16} className="text-slate-400" /> Import Leads
                                         </button>
-                                        <button className="w-full text-left px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 rounded transition-colors flex items-center gap-3">
-                                            <Database size={16} className="text-slate-400" /> Bulk Update
-                                        </button>
+                                        <div className="relative group">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (selectedIds.size > 0) {
+                                                        setIsBulkUpdateModalOpen(true);
+                                                        setIsMoreMenuOpen(false);
+                                                    }
+                                                }}
+                                                disabled={selectedIds.size === 0}
+                                                aria-disabled={selectedIds.size === 0}
+                                                className={`w-full text-left px-3 py-1.5 text-sm rounded transition-colors flex items-center gap-3 
+                                                    ${selectedIds.size > 0
+                                                        ? 'text-slate-600 hover:bg-slate-50 cursor-pointer'
+                                                        : 'text-slate-400 cursor-default opacity-60'}`}
+                                            >
+                                                <Database size={16} className={selectedIds.size > 0 ? "text-slate-400" : "text-slate-300"} />
+                                                Bulk Update {selectedIds.size > 0 && `(${selectedIds.size})`}
+                                            </button>
+
+                                            {/* Disabled Tooltip */}
+                                            {selectedIds.size === 0 && (
+                                                <div className="absolute right-full top-1/2 -translate-y-1/2 mr-2 px-2 py-1 bg-slate-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                                                    Select one or more leads to enable bulk update
+                                                    <div className="absolute right-[-4px] top-1/2 -translate-y-1/2 w-2 h-2 bg-slate-800 rotate-45 transform"></div>
+                                                </div>
+                                            )}
+                                        </div>
                                         <div className="h-px bg-slate-100 my-1"></div>
-                                        <button className="w-full text-left px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 rounded transition-colors flex items-center gap-3">
-                                            <FileInput size={16} className="text-slate-400" /> Manage Lead Sources
-                                        </button>
-                                        <button className="w-full text-left px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 rounded transition-colors flex items-center gap-3">
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                downloadLeadTemplate();
+                                                setIsMoreMenuOpen(false);
+                                            }}
+                                            className="w-full text-left px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 rounded transition-colors flex items-center gap-3"
+                                        >
                                             <FileText size={16} className="text-slate-400" /> Download Template
-                                        </button>
-                                        <div className="h-px bg-slate-100 my-1"></div>
-                                        <button className="w-full text-left px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 rounded-lg transition-colors flex items-center gap-3">
-                                            <Settings size={16} className="text-slate-400" /> Settings
                                         </button>
                                     </div>
                                 </>
@@ -545,6 +582,25 @@ const LeadList = ({ leads, selectedLeadId, onSelectLead, onCreateLead, compact, 
                         onClose={() => setIsColumnManagerOpen(false)}
                         currentColumns={columns.filter(c => c.id !== 'actions')}
                         onSave={handleUpdateColumns}
+                    />
+
+                    {/* Import Leads Modal */}
+                    <ImportLeadsModal
+                        isOpen={isImportModalOpen}
+                        onClose={() => setIsImportModalOpen(false)}
+                        onImportComplete={onImportLeads}
+                        existingEmails={leads.map(l => l.email)}
+                    />
+
+                    {/* Bulk Update Modal */}
+                    <BulkUpdateModal
+                        isOpen={isBulkUpdateModalOpen}
+                        onClose={() => setIsBulkUpdateModalOpen(false)}
+                        selectedLeads={leads.filter(l => selectedIds.has(l.id))}
+                        onUpdate={(ids, updates) => {
+                            onBulkUpdate(ids, updates);
+                            setSelectedIds(new Set()); // Clear selection after update
+                        }}
                     />
 
                     {/* Grid Table Container */}
@@ -718,10 +774,14 @@ const LeadList = ({ leads, selectedLeadId, onSelectLead, onCreateLead, compact, 
                                                                 return (
                                                                     <div key={col.id} className={cellClass}>
                                                                         <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold border ${lead.stage === 'New' ? 'bg-sky-50 text-sky-700 border-sky-100' :
-                                                                            lead.stage === 'Contacted' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' :
-                                                                                lead.stage === 'Qualified' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                                                                                    lead.stage === 'Converted' ? 'bg-purple-50 text-purple-700 border-purple-100' :
-                                                                                        'bg-slate-50 text-slate-600 border-slate-200'
+                                                                            lead.stage === 'Attempting Contact' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' :
+                                                                                lead.stage === 'Pre-Screening' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                                                                                    lead.stage === 'Hold' ? 'bg-orange-50 text-orange-700 border-orange-100' :
+                                                                                        lead.stage === 'Nurturing' ? 'bg-blue-50 text-blue-700 border-blue-100' :
+                                                                                            lead.stage === 'Qualified' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                                                                                                lead.stage === 'Adverse Action' ? 'bg-red-50 text-red-700 border-red-100' :
+                                                                                                    lead.stage === 'Converted' ? 'bg-purple-50 text-purple-700 border-purple-100' :
+                                                                                                        'bg-slate-50 text-slate-600 border-slate-200'
                                                                             }`}>
                                                                             {lead.stage}
                                                                         </span>
