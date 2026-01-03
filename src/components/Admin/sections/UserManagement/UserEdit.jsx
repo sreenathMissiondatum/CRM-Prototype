@@ -3,11 +3,12 @@ import {
     ArrowLeft, Save, User, Mail, Briefcase, Building, Shield,
     Lock, Globe, AlertCircle, ChevronDown, Check, X, Eye,
     Calendar, Key, Clock, Info, CheckCircle, Search, MoreVertical, Copy, RotateCcw,
-    PauseCircle, PlayCircle, Trash2, ChevronRight
+    PauseCircle, PlayCircle, Trash2, ChevronRight, Camera, Upload, Snowflake
 } from 'lucide-react';
-import { MOCK_VISIBILITY_GROUPS } from '../../../../data/mockVisibilityGroups';
 
-const UserEdit = ({ user, onSave, onCancel, existingUsers = [] }) => {
+
+const UserEdit = ({ user, onSave, onCancel, existingUsers = [], readOnly = false }) => {
+    console.log("UserEdit Received User:", user, "Metadata:", user?.freezeMetadata);
     // --- State ---
     const [formData, setFormData] = useState({
         firstName: user?.name?.split(' ')[0] || '',
@@ -15,6 +16,7 @@ const UserEdit = ({ user, onSave, onCancel, existingUsers = [] }) => {
         email: user?.email || '',
         phone: user?.phone || '',
         jobTitle: user?.jobTitle || '',
+        profilePhotoUrl: user?.profilePhotoUrl || null,
         status: user?.status || 'Pending Activation',
 
         // Org
@@ -26,7 +28,7 @@ const UserEdit = ({ user, onSave, onCancel, existingUsers = [] }) => {
 
         // Additive Security
         additivePermissions: [],
-        additiveVisibility: [],
+
 
         // Preferences
         locale: user?.locale || 'en-US',
@@ -42,6 +44,7 @@ const UserEdit = ({ user, onSave, onCancel, existingUsers = [] }) => {
     const [showRoleWarning, setShowRoleWarning] = useState(false);
     const [pendingRole, setPendingRole] = useState(null);
     const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
+    const [isPermissionModalOpen, setIsPermissionModalOpen] = useState(false);
 
 
 
@@ -75,11 +78,7 @@ const UserEdit = ({ user, onSave, onCancel, existingUsers = [] }) => {
         { id: 'p4', name: 'View Audit Logs', type: 'Read-Only' }
     ];
 
-    const AVAILABLE_VISIBILITY = MOCK_VISIBILITY_GROUPS.map(g => ({
-        id: g.id,
-        name: g.name,
-        scope: g.description // Compatibility mapping
-    }));
+
 
     const DEPARTMENT_OPTIONS = ['Lending', 'Credit', 'Operations', 'Finance', 'Compliance', 'Servicing', 'Admin', 'IT', 'Marketing'];
     const BRANCH_OPTIONS = ['New York HQ', 'Austin Branch', 'Chicago Branch', 'SF Tech Hub', 'Miami Sales', 'Remote'];
@@ -92,7 +91,7 @@ const UserEdit = ({ user, onSave, onCancel, existingUsers = [] }) => {
 
     // --- Derived State ---
     const inheritedPermissions = ROLE_BASELINES[formData.role]?.permissions || [];
-    const inheritedVisibility = ROLE_BASELINES[formData.role]?.visibility || [];
+
     const canActivate = formData.role && formData.firstName && formData.lastName;
 
     // --- Handlers ---
@@ -126,15 +125,7 @@ const UserEdit = ({ user, onSave, onCancel, existingUsers = [] }) => {
         handleChange('additivePermissions', formData.additivePermissions.filter(p => p.id !== permId));
     };
 
-    const handleAddVisibility = (group) => {
-        if (!formData.additiveVisibility.find(g => g.id === group.id)) {
-            handleChange('additiveVisibility', [...formData.additiveVisibility, group]);
-        }
-    };
 
-    const handleRemoveVisibility = (groupId) => {
-        handleChange('additiveVisibility', formData.additiveVisibility.filter(g => g.id !== groupId));
-    };
 
     const toggleMultiSelect = (field, item) => {
         const current = formData[field] || [];
@@ -155,6 +146,19 @@ const UserEdit = ({ user, onSave, onCancel, existingUsers = [] }) => {
 
     const handleUnfreeze = () => {
         handleSave('unfreeze');
+    };
+
+    const handlePhotoUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            // MVP: Create local object URL for preview
+            const url = URL.createObjectURL(file);
+            handleChange('profilePhotoUrl', url);
+        }
+    };
+
+    const handleRemovePhoto = () => {
+        handleChange('profilePhotoUrl', null);
     };
 
     const handleSave = (actionType) => {
@@ -210,7 +214,7 @@ const UserEdit = ({ user, onSave, onCancel, existingUsers = [] }) => {
                         <ChevronRight size={12} />
                         <span className="cursor-pointer hover:text-slate-800">Users</span>
                         <ChevronRight size={12} />
-                        <span className="text-blue-600">Edit User</span>
+                        <span className="text-blue-600">{readOnly ? 'User Details' : 'Edit User'}</span>
                     </div>
                     <div className="flex items-center gap-3">
                         <h1 className="text-xl font-bold text-slate-900">{formData.firstName} {formData.lastName}</h1>
@@ -227,8 +231,13 @@ const UserEdit = ({ user, onSave, onCancel, existingUsers = [] }) => {
                             </span>
                         )}
                         {formData.status === 'Frozen' && (
-                            <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold flex items-center gap-1.5">
-                                <undefined size={12} /> Frozen
+                            <span className="px-2.5 py-0.5 rounded-full bg-cyan-50 text-cyan-700 border border-cyan-200 text-xs font-bold flex items-center gap-1.5">
+                                <Snowflake size={12} /> Frozen
+                                {user?.freezeMetadata?.until && (
+                                    <span className="font-normal opacity-75 ml-0.5">
+                                        (until {new Date(user.freezeMetadata.until).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })})
+                                    </span>
+                                )}
                             </span>
                         )}
                         {formData.status === 'Inactive' && (
@@ -240,90 +249,16 @@ const UserEdit = ({ user, onSave, onCancel, existingUsers = [] }) => {
                 </div>
                 <div className="flex items-center gap-3">
                     <button onClick={onCancel} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
-                        Cancel
+                        {readOnly ? 'Close' : 'Cancel'}
                     </button>
-                    <button
-                        onClick={() => handleSave('save')}
-                        className="px-4 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-all shadow-sm"
-                    >
-                        Save Changes
-                    </button>
-
-                    {/* Kebab Menu - Lifecycle Actions */}
-                    <div className="relative ml-1">
+                    {!readOnly && (
                         <button
-                            onClick={() => setIsActionMenuOpen(!isActionMenuOpen)}
-                            className={`p-2 rounded-lg border transition-all ${isActionMenuOpen ? 'bg-slate-100 border-slate-300 text-slate-800' : 'bg-white border-slate-200 text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
+                            onClick={() => handleSave('save')}
+                            className="px-4 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-all shadow-sm"
                         >
-                            <MoreVertical size={20} />
+                            Save Changes
                         </button>
-
-                        {isActionMenuOpen && (
-                            <>
-                                <div className="fixed inset-0 z-30" onClick={() => setIsActionMenuOpen(false)}></div>
-                                <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-xl z-40 py-2 origin-top-right animate-in fade-in zoom-in-95 duration-100">
-
-                                    {/* SECTION 1: OPERATIONAL */}
-                                    <div className="px-2 pb-2 border-b border-slate-100 mb-2">
-                                        <div className="px-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Operational</div>
-                                        <button
-                                            onClick={() => { setIsActionMenuOpen(false); window.alert('Clone User placeholder'); }}
-                                            className="w-full text-left px-2 py-1.5 text-sm text-slate-700 hover:bg-slate-50 rounded flex items-center gap-2"
-                                        >
-                                            <Copy size={14} className="text-slate-400" /> Clone User
-                                        </button>
-                                        <button
-                                            onClick={() => { setIsActionMenuOpen(false); window.alert('Reset Password placeholder'); }}
-                                            className="w-full text-left px-2 py-1.5 text-sm text-slate-700 hover:bg-slate-50 rounded flex items-center gap-2"
-                                        >
-                                            <RotateCcw size={14} className="text-slate-400" /> Reset Password
-                                        </button>
-                                        {(formData.status === 'Pending Activation' || formData.status === 'Invited') && (
-                                            <button
-                                                onClick={() => { setIsActionMenuOpen(false); handleSave('activate'); }}
-                                                className="w-full text-left px-2 py-1.5 text-sm text-slate-700 hover:bg-slate-50 rounded flex items-center gap-2"
-                                            >
-                                                <Mail size={14} className="text-slate-400" /> Send Activation Email
-                                            </button>
-                                        )}
-                                    </div>
-
-                                    {/* SECTION 2: ACCESS CONTROL */}
-                                    <div className="px-2 pb-2 border-b border-slate-100 mb-2">
-                                        <div className="px-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Access Control</div>
-                                        {formData.status === 'Frozen' ? (
-                                            <button
-                                                onClick={() => { setIsActionMenuOpen(false); handleUnfreeze(); }}
-                                                className="w-full text-left px-2 py-1.5 text-sm text-slate-700 hover:bg-slate-50 rounded flex items-center gap-2"
-                                            >
-                                                <PlayCircle size={14} className="text-emerald-500" /> Unfreeze User
-                                            </button>
-                                        ) : (
-                                            <button
-                                                onClick={() => { setIsActionMenuOpen(false); handleFreeze(); }}
-                                                className="w-full text-left px-2 py-1.5 text-sm text-slate-700 hover:bg-slate-50 rounded flex items-center gap-2"
-                                            >
-                                                <PauseCircle size={14} className="text-amber-500" /> Freeze User
-                                            </button>
-                                        )}
-                                    </div>
-
-                                    {/* SECTION 3: DESTRUCTIVE */}
-                                    <div className="px-2">
-                                        <div className="px-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Danger Zone</div>
-                                        {formData.status !== 'Inactive' && (
-                                            <button
-                                                onClick={() => { setIsActionMenuOpen(false); handleSave('deactivate'); }}
-                                                className="w-full text-left px-2 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded flex items-center gap-2"
-                                            >
-                                                <Trash2 size={14} className="text-red-500" /> Deactivate User
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            </>
-                        )}
-                    </div>
+                    )}
                 </div>
             </div>
 
@@ -336,14 +271,59 @@ const UserEdit = ({ user, onSave, onCancel, existingUsers = [] }) => {
                         <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-5 flex items-center gap-2 relative z-10">
                             <User size={16} className="text-blue-500" /> Identity
                         </h3>
+
                         <div className="space-y-4 relative z-10">
                             <div className="grid grid-cols-2 gap-4">
-                                <Input label="First Name" value={formData.firstName} onChange={e => handleChange('firstName', e.target.value)} />
-                                <Input label="Last Name" value={formData.lastName} onChange={e => handleChange('lastName', e.target.value)} />
+                                <Input label="First Name" value={formData.firstName} onChange={e => handleChange('firstName', e.target.value)} readOnly={readOnly} />
+                                <Input label="Last Name" value={formData.lastName} onChange={e => handleChange('lastName', e.target.value)} readOnly={readOnly} />
                             </div>
-                            <Input label="Email Address" value={formData.email} readOnly lockTooltip="Email is the user’s login identifier and cannot be changed." />
-                            <Input label="Job Title" value={formData.jobTitle} onChange={e => handleChange('jobTitle', e.target.value)} />
-                            <Input label="Phone Number" value={formData.phone} onChange={e => handleChange('phone', e.target.value)} />
+                            <Input label="Email Address" value={formData.email} readOnly lockTooltip={readOnly ? null : "Email is the user’s login identifier and cannot be changed."} />
+                            <Input label="Job Title" value={formData.jobTitle} onChange={e => handleChange('jobTitle', e.target.value)} readOnly={readOnly} />
+                            <Input label="Phone Number" value={formData.phone} onChange={e => handleChange('phone', e.target.value)} readOnly={readOnly} />
+                        </div>
+                    </section>
+
+                    {/* Profile Photo Section (New) */}
+                    <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+                        <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-5 flex items-center gap-2">
+                            <Camera size={16} className="text-purple-500" /> Profile Photo
+                        </h3>
+                        <div className="flex flex-col items-center gap-4">
+                            <div className="relative group">
+                                <div className={`w-32 h-32 rounded-full border-4 border-slate-50 shadow-sm flex items-center justify-center overflow-hidden ${!formData.profilePhotoUrl ? 'bg-slate-100 text-slate-400' : 'bg-white'}`}>
+                                    {formData.profilePhotoUrl ? (
+                                        <img src={formData.profilePhotoUrl} alt="Profile" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <span className="text-4xl font-bold bg-slate-100 text-slate-400">
+                                            {formData.firstName?.[0]}{formData.lastName?.[0] || <User size={48} />}
+                                        </span>
+                                    )}
+                                </div>
+                                {!readOnly && (
+                                    <label className="absolute bottom-0 right-1 p-2 bg-blue-600 text-white rounded-full cursor-pointer hover:bg-blue-700 shadow-sm transition-colors ring-4 ring-white">
+                                        <Upload size={16} />
+                                        <input type="file" className="hidden" accept="image/png, image/jpeg" onChange={handlePhotoUpload} />
+                                    </label>
+                                )}
+                            </div>
+                            {!readOnly && (
+                                <div className="flex flex-col items-center gap-2">
+                                    <label className="text-sm font-bold text-blue-600 cursor-pointer hover:text-blue-700 hover:underline">
+                                        Upload Photo
+                                        <input type="file" className="hidden" accept="image/png, image/jpeg" onChange={handlePhotoUpload} />
+                                    </label>
+                                    {formData.profilePhotoUrl && (
+                                        <button onClick={handleRemovePhoto} className="text-xs text-red-500 hover:text-red-600 font-medium flex items-center gap-1">
+                                            <Trash2 size={12} /> Remove Photo
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                            {!readOnly && (
+                                <p className="text-[10px] text-slate-400 text-center max-w-[200px]">
+                                    Supported: JPG, PNG. Max size: 2MB.
+                                </p>
+                            )}
                         </div>
                     </section>
                 </div>
@@ -366,6 +346,7 @@ const UserEdit = ({ user, onSave, onCancel, existingUsers = [] }) => {
                                 onChange={e => handleChange('role', e.target.value)}
                                 error={errors.role}
                                 desc="Defines the user’s baseline permissions."
+                                disabled={readOnly}
                             />
                             <div className="space-y-1.5 w-full">
                                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">
@@ -374,9 +355,10 @@ const UserEdit = ({ user, onSave, onCancel, existingUsers = [] }) => {
                                 <p className="text-xs text-slate-400 mb-1">Direct manager for reporting hierarchy.</p>
                                 <div className="relative">
                                     <select
-                                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 appearance-none focus:bg-white focus:outline-none focus:ring-2 focus:border-blue-400 transition-all cursor-pointer"
+                                        className={`w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 appearance-none focus:bg-white focus:outline-none focus:ring-2 focus:border-blue-400 transition-all ${readOnly ? 'cursor-not-allowed opacity-70 bg-slate-100' : 'cursor-pointer'}`}
                                         value={formData.reportsTo || ''}
                                         onChange={e => handleChange('reportsTo', e.target.value)}
+                                        disabled={readOnly}
                                     >
                                         <option value="">Select Manager...</option>
                                         {existingUsers?.filter(u => u.id !== user?.id).map(u => (
@@ -395,6 +377,7 @@ const UserEdit = ({ user, onSave, onCancel, existingUsers = [] }) => {
                                 options={DEPARTMENT_OPTIONS}
                                 selected={formData.departments}
                                 onToggle={item => toggleMultiSelect('departments', item)}
+                                disabled={readOnly}
                             />
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <MultiSelect
@@ -402,12 +385,14 @@ const UserEdit = ({ user, onSave, onCancel, existingUsers = [] }) => {
                                     options={BRANCH_OPTIONS}
                                     selected={formData.branches}
                                     onToggle={item => toggleMultiSelect('branches', item)}
+                                    disabled={readOnly}
                                 />
                                 <MultiSelect
                                     label="Teams"
                                     options={TEAM_OPTIONS}
                                     selected={formData.teams}
                                     onToggle={item => toggleMultiSelect('teams', item)}
+                                    disabled={readOnly}
                                 />
                             </div>
                         </div>
@@ -436,20 +421,11 @@ const UserEdit = ({ user, onSave, onCancel, existingUsers = [] }) => {
                                                     )) : <span className="text-xs text-slate-400 italic">No permissions defined</span>}
                                                 </div>
                                             </div>
-                                            <div>
-                                                <span className="text-[10px] font-bold uppercase text-slate-400 mb-1.5 block">Inherited Visibility</span>
-                                                <div className="flex flex-wrap gap-1.5">
-                                                    {inheritedVisibility.length > 0 ? inheritedVisibility.map(v => (
-                                                        <span key={v} className="inline-flex items-center px-2 py-1 rounded-md bg-white border border-slate-200 text-xs text-slate-600 shadow-sm">
-                                                            <Eye size={10} className="mr-1.5 text-slate-400" /> {v}
-                                                        </span>
-                                                    )) : <span className="text-xs text-slate-400 italic">No visibility defined</span>}
-                                                </div>
-                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
+
                         )}
                     </section>
 
@@ -469,11 +445,14 @@ const UserEdit = ({ user, onSave, onCancel, existingUsers = [] }) => {
                                         <label className="text-xs font-bold text-slate-700">Permission Sets</label>
                                         <p className="text-[11px] text-slate-500 mt-0.5">Permission Sets extend access beyond the user’s role baseline.</p>
                                     </div>
-                                    <PermissionDropdown
-                                        options={AVAILABLE_PERMISSIONS}
-                                        assigned={formData.additivePermissions}
-                                        onSelect={handleAddPermission}
-                                    />
+                                    {!readOnly && (
+                                        <button
+                                            onClick={() => setIsPermissionModalOpen(true)}
+                                            className="text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounde-md flex items-center gap-1 transition-colors"
+                                        >
+                                            + Assign
+                                        </button>
+                                    )}
                                 </div>
                                 <div className="bg-slate-50 rounded-lg border border-slate-200 p-3 min-h-[60px] flex flex-wrap gap-2">
                                     {formData.additivePermissions.length === 0 ? (
@@ -484,46 +463,18 @@ const UserEdit = ({ user, onSave, onCancel, existingUsers = [] }) => {
                                                 <div className="flex flex-col">
                                                     <span className="text-xs font-bold text-slate-700">{p.name}</span>
                                                 </div>
-                                                <button onClick={() => handleRemovePermission(p.id)} className="text-slate-400 hover:text-red-500 transition-colors">
-                                                    <X size={14} />
-                                                </button>
+                                                {!readOnly && (
+                                                    <button onClick={() => handleRemovePermission(p.id)} className="text-slate-400 hover:text-red-500 transition-colors">
+                                                        <X size={14} />
+                                                    </button>
+                                                )}
                                             </div>
                                         ))
                                     )}
                                 </div>
                             </div>
 
-                            {/* Visibility Groups */}
-                            <div>
-                                <div className="flex justify-between items-end mb-2">
-                                    <div>
-                                        <label className="text-xs font-bold text-slate-700">Visibility Groups</label>
-                                        <p className="text-[11px] text-slate-500 mt-0.5">Visibility Groups control which records the user can see, beyond role-based defaults.</p>
-                                    </div>
-                                    <VisibilityDropdown
-                                        options={AVAILABLE_VISIBILITY}
-                                        assigned={formData.additiveVisibility}
-                                        onSelect={handleAddVisibility}
-                                    />
-                                </div>
-                                <div className="bg-slate-50 rounded-lg border border-slate-200 p-3 min-h-[60px] flex flex-wrap gap-2">
-                                    {formData.additiveVisibility.length === 0 ? (
-                                        <span className="text-xs text-slate-400 italic self-center">No additional visibility groups assigned.</span>
-                                    ) : (
-                                        formData.additiveVisibility.map(v => (
-                                            <div key={v.id} className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg shadow-sm group">
-                                                <div className="flex flex-col">
-                                                    <span className="text-xs font-bold text-slate-700">{v.name}</span>
-                                                    <span className="text-[10px] text-slate-400">{v.scope}</span>
-                                                </div>
-                                                <button onClick={() => handleRemoveVisibility(v.id)} className="text-slate-400 hover:text-red-500 transition-colors">
-                                                    <X size={14} />
-                                                </button>
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-                            </div>
+
                         </div>
                     </section>
 
@@ -533,10 +484,10 @@ const UserEdit = ({ user, onSave, onCancel, existingUsers = [] }) => {
                             <Globe size={16} className="text-purple-500" /> Preferences
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <Select label="Locale" value={formData.locale} options={LOCALES} onChange={e => handleChange('locale', e.target.value)} />
-                            <Select label="Timezone" value={formData.timezone} options={TIMEZONES} onChange={e => handleChange('timezone', e.target.value)} />
-                            <Select label="Date Format" value={formData.dateFormat} options={DATE_FORMATS} onChange={e => handleChange('dateFormat', e.target.value)} />
-                            <Select label="Number Format" value={formData.numberFormat} options={NUMBER_FORMATS} onChange={e => handleChange('numberFormat', e.target.value)} />
+                            <Select label="Locale" value={formData.locale} options={LOCALES} onChange={e => handleChange('locale', e.target.value)} disabled={readOnly} />
+                            <Select label="Timezone" value={formData.timezone} options={TIMEZONES} onChange={e => handleChange('timezone', e.target.value)} disabled={readOnly} />
+                            <Select label="Date Format" value={formData.dateFormat} options={DATE_FORMATS} onChange={e => handleChange('dateFormat', e.target.value)} disabled={readOnly} />
+                            <Select label="Number Format" value={formData.numberFormat} options={NUMBER_FORMATS} onChange={e => handleChange('numberFormat', e.target.value)} disabled={readOnly} />
                         </div>
                     </section>
 
@@ -590,7 +541,7 @@ const UserEdit = ({ user, onSave, onCancel, existingUsers = [] }) => {
 
                         {activeTab === 'preview' && (
                             <div className="p-6 bg-white animate-in slide-in-from-top-1">
-                                <div className="grid grid-cols-2 gap-8">
+                                <div className="grid grid-cols-1 gap-8">
                                     <div>
                                         <h4 className="text-xs font-bold uppercase text-slate-500 mb-3 border-b border-slate-100 pb-2">Combined Permissions</h4>
                                         <ul className="space-y-2">
@@ -606,65 +557,65 @@ const UserEdit = ({ user, onSave, onCancel, existingUsers = [] }) => {
                                             ))}
                                         </ul>
                                     </div>
-                                    <div>
-                                        <h4 className="text-xs font-bold uppercase text-slate-500 mb-3 border-b border-slate-100 pb-2">Combined Visibility</h4>
-                                        <ul className="space-y-2">
-                                            {inheritedVisibility.map(p => (
-                                                <li key={p} className="text-xs text-slate-700 flex items-center gap-2">
-                                                    <Eye size={12} className="text-indigo-500" /> {p} <span className="ml-auto text-[10px] text-slate-400 bg-slate-100 px-1.5 rounded">Role</span>
-                                                </li>
-                                            ))}
-                                            {formData.additiveVisibility.map(p => (
-                                                <li key={p.id} className="text-xs text-slate-700 flex items-center gap-2">
-                                                    <Eye size={12} className="text-purple-500" /> {p.name} <span className="ml-auto text-[10px] text-slate-400 bg-slate-100 px-1.5 rounded">Direct</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
                                 </div>
                             </div>
                         )}
                     </div>
 
                 </div>
-            </div>
+            </div >
 
             {/* Warning Modal */}
-            {showRoleWarning && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowRoleWarning(false)}></div>
-                    <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
-                        <div className="flex items-center gap-4 mb-4">
-                            <div className="p-3 bg-amber-100 text-amber-600 rounded-full">
-                                <AlertCircle size={24} />
+            {
+                showRoleWarning && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowRoleWarning(false)}></div>
+                        <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
+                            <div className="flex items-center gap-4 mb-4">
+                                <div className="p-3 bg-amber-100 text-amber-600 rounded-full">
+                                    <AlertCircle size={24} />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-slate-900">Change Role?</h3>
+                                    <p className="text-sm text-slate-500">This will impact user access.</p>
+                                </div>
                             </div>
-                            <div>
-                                <h3 className="text-lg font-bold text-slate-900">Change Role?</h3>
-                                <p className="text-sm text-slate-500">This will impact user access.</p>
+                            <p className="text-sm text-slate-600 mb-6 leading-relaxed">
+                                Changing the role will <strong>reset baseline permissions</strong> for this user.
+                                Existing permission sets will be re-evaluated against the new role.
+                            </p>
+                            <div className="flex justify-end gap-3">
+                                <button
+                                    onClick={() => setShowRoleWarning(false)}
+                                    className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={confirmRoleChange}
+                                    className="px-4 py-2 text-sm font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors"
+                                >
+                                    Yes, Change Role
+                                </button>
                             </div>
-                        </div>
-                        <p className="text-sm text-slate-600 mb-6 leading-relaxed">
-                            Changing the role will <strong>reset baseline permissions</strong> for this user.
-                            Existing permission sets will be re-evaluated against the new role.
-                        </p>
-                        <div className="flex justify-end gap-3">
-                            <button
-                                onClick={() => setShowRoleWarning(false)}
-                                className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={confirmRoleChange}
-                                className="px-4 py-2 text-sm font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors"
-                            >
-                                Yes, Change Role
-                            </button>
                         </div>
                     </div>
-                </div>
+                )
+            }
+            {/* Permission Assignment Modal */}
+            {isPermissionModalOpen && (
+                <PermissionAssignmentModal
+                    isOpen={isPermissionModalOpen}
+                    onClose={() => setIsPermissionModalOpen(false)}
+                    initialAssigned={formData.additivePermissions}
+                    availableOptions={AVAILABLE_PERMISSIONS}
+                    onSave={(newPermissions) => {
+                        handleChange('additivePermissions', newPermissions);
+                        setIsPermissionModalOpen(false);
+                    }}
+                />
             )}
-        </div>
+        </div >
     );
 };
 
@@ -701,7 +652,7 @@ const Select = ({ label, req, options, error, desc, ...props }) => (
         {desc && <p className="text-xs text-slate-400 mb-1">{desc}</p>}
         <div className="relative">
             <select
-                className={`w-full px-3 py-2 bg-slate-50 border rounded-lg text-sm text-slate-800 appearance-none focus:bg-white focus:outline-none focus:ring-2 transition-all cursor-pointer ${error ? 'border-red-300 focus:ring-red-100' : 'border-slate-200 focus:ring-blue-100 focus:border-blue-400'}`}
+                className={`w-full px-3 py-2 bg-slate-50 border rounded-lg text-sm text-slate-800 appearance-none focus:bg-white focus:outline-none focus:ring-2 transition-all ${props.disabled ? 'cursor-not-allowed opacity-70 bg-slate-100' : 'cursor-pointer'} ${error ? 'border-red-300 focus:ring-red-100' : 'border-slate-200 focus:ring-blue-100 focus:border-blue-400'}`}
                 {...props}
             >
                 <option value="">Select...</option>
@@ -713,73 +664,9 @@ const Select = ({ label, req, options, error, desc, ...props }) => (
     </div>
 );
 
-const PermissionDropdown = ({ options, assigned, onSelect }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const available = options.filter(o => !assigned.find(a => a.id === o.id));
 
-    return (
-        <div className="relative">
-            <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounde-md flex items-center gap-1 transition-colors"
-            >
-                + Assign
-            </button>
-            {isOpen && (
-                <>
-                    <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)}></div>
-                    <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-slate-200 rounded-lg shadow-xl z-20 py-1">
-                        {available.length === 0 ? (
-                            <div className="px-3 py-2 text-xs text-slate-400">No more available</div>
-                        ) : available.map(opt => (
-                            <button
-                                key={opt.id}
-                                onClick={() => { onSelect(opt); setIsOpen(false); }}
-                                className="w-full text-left px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-blue-600 truncate"
-                            >
-                                {opt.name}
-                            </button>
-                        ))}
-                    </div>
-                </>
-            )}
-        </div>
-    );
-};
 
-const VisibilityDropdown = ({ options, assigned, onSelect }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const available = options.filter(o => !assigned.find(a => a.id === o.id));
 
-    return (
-        <div className="relative">
-            <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="text-xs font-bold text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 px-2 py-1 rounde-md flex items-center gap-1 transition-colors"
-            >
-                + Add Scope
-            </button>
-            {isOpen && (
-                <>
-                    <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)}></div>
-                    <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-slate-200 rounded-lg shadow-xl z-20 py-1">
-                        {available.length === 0 ? (
-                            <div className="px-3 py-2 text-xs text-slate-400">No more available</div>
-                        ) : available.map(opt => (
-                            <button
-                                key={opt.id}
-                                onClick={() => { onSelect(opt); setIsOpen(false); }}
-                                className="w-full text-left px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-purple-600 truncate"
-                            >
-                                {opt.name}
-                            </button>
-                        ))}
-                    </div>
-                </>
-            )}
-        </div>
-    );
-};
 
 // --- New Sub-Components ---
 
@@ -798,7 +685,7 @@ const Toggle = ({ label, desc, checked, onChange }) => (
     </div>
 );
 
-const MultiSelect = ({ label, options, selected, onToggle }) => {
+const MultiSelect = ({ label, options, selected, onToggle, ...props }) => {
     const [isOpen, setIsOpen] = useState(false);
 
     return (
@@ -810,14 +697,14 @@ const MultiSelect = ({ label, options, selected, onToggle }) => {
 
             <div className="relative">
                 <div
-                    onClick={() => setIsOpen(!isOpen)}
-                    className="min-h-[38px] w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg flex flex-wrap gap-1.5 cursor-pointer hover:bg-white hover:border-blue-300 transition-colors"
+                    onClick={() => !props.disabled && setIsOpen(!isOpen)}
+                    className={`min-h-[38px] w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg flex flex-wrap gap-1.5 transition-colors ${props.disabled ? 'cursor-not-allowed opacity-70 bg-slate-100' : 'cursor-pointer hover:bg-white hover:border-blue-300'}`}
                 >
                     {selected.length === 0 && <span className="text-sm text-slate-400 px-1">Select...</span>}
                     {selected.map(item => (
                         <span key={item} className="inline-flex items-center gap-1 px-2 py-0.5 bg-white border border-slate-200 rounded text-xs font-medium text-slate-700 shadow-sm">
                             {item}
-                            <X size={12} className="text-slate-400 hover:text-red-500 cursor-pointer" onClick={(e) => { e.stopPropagation(); onToggle(item); }} />
+                            {!props.disabled && <X size={12} className="text-slate-400 hover:text-red-500 cursor-pointer" onClick={(e) => { e.stopPropagation(); onToggle(item); }} />}
                         </span>
                     ))}
                     <div className="ml-auto self-center text-slate-400">
@@ -842,6 +729,136 @@ const MultiSelect = ({ label, options, selected, onToggle }) => {
                         </div>
                     </>
                 )}
+            </div>
+        </div>
+    );
+};
+
+
+
+const PermissionAssignmentModal = ({ isOpen, onClose, initialAssigned, availableOptions, onSave }) => {
+    const [assigned, setAssigned] = useState([...initialAssigned]);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    // Filter available options (exclude already assigned)
+    const available = availableOptions.filter(
+        opt => !assigned.find(a => a.id === opt.id) &&
+            opt.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const handleAdd = (item) => {
+        setAssigned([...assigned, { ...item, addedDate: new Date().toLocaleDateString() }]);
+    };
+
+    const handleRemove = (itemId) => {
+        setAssigned(assigned.filter(a => a.id !== itemId));
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose}></div>
+            <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+                {/* Header */}
+                <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                    <div>
+                        <h3 className="text-lg font-bold text-slate-900">Assign Permission Sets</h3>
+                        <p className="text-sm text-slate-500">Select additional permission sets to extend the user’s access.</p>
+                    </div>
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+                        <X size={20} />
+                    </button>
+                </div>
+
+                {/* Body */}
+                <div className="p-6 flex-1 overflow-hidden flex gap-4 min-h-[400px]">
+                    {/* Left Pane: Available */}
+                    <div className="flex-1 flex flex-col border border-slate-200 rounded-lg overflow-hidden">
+                        <div className="bg-slate-50 px-3 py-2 border-b border-slate-200 flex items-center justify-between">
+                            <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Available</span>
+                            <div className="relative">
+                                <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Search..."
+                                    className="pl-6 pr-2 py-1 text-xs border border-slate-200 rounded-md focus:outline-none focus:border-blue-400 w-32"
+                                    value={searchTerm}
+                                    onChange={e => setSearchTerm(e.target.value)}
+                                    autoFocus
+                                />
+                            </div>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                            {available.length === 0 ? (
+                                <div className="text-center py-8 text-slate-400 text-sm">
+                                    {searchTerm ? 'No matches found' : 'No available permission sets'}
+                                </div>
+                            ) : (
+                                available.map(item => (
+                                    <div key={item.id} className="flex items-center justify-between p-2 hover:bg-slate-50 rounded-md group">
+                                        <div>
+                                            <div className="text-sm font-medium text-slate-700">{item.name}</div>
+                                            <div className="textxs text-slate-400 flex items-center gap-1">
+                                                {item.type && <span className="bg-slate-100 px-1.5 rounded text-[10px] uppercase tracking-wide">{item.type}</span>}
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => handleAdd(item)}
+                                            className="text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-50 p-1 rounded"
+                                        >
+                                            <ChevronRight size={16} />
+                                        </button>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Right Pane: Assigned */}
+                    <div className="flex-1 flex flex-col border border-slate-200 rounded-lg overflow-hidden bg-slate-50/30">
+                        <div className="bg-white px-3 py-2 border-b border-slate-200">
+                            <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Assigned</span>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                            {assigned.length === 0 ? (
+                                <div className="text-center py-8 text-slate-400 text-sm italic">
+                                    No permission sets assigned
+                                </div>
+                            ) : (
+                                assigned.map(item => (
+                                    <div key={item.id} className="flex items-center justify-between p-2 bg-white border border-slate-200 rounded-md shadow-sm">
+                                        <div className="flex items-center gap-2">
+                                            <CheckCircle size={14} className="text-emerald-500" />
+                                            <span className="text-sm font-medium text-slate-700">{item.name}</span>
+                                        </div>
+                                        <button
+                                            onClick={() => handleRemove(item.id)}
+                                            className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-1 rounded transition-colors"
+                                        >
+                                            <X size={14} />
+                                        </button>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Footer */}
+                <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-3 bg-slate-50 rounded-b-xl">
+                    <button
+                        onClick={onClose}
+                        className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={() => onSave(assigned)}
+                        className="px-4 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={JSON.stringify(assigned) === JSON.stringify(initialAssigned)}
+                    >
+                        Save Assignments
+                    </button>
+                </div>
             </div>
         </div>
     );

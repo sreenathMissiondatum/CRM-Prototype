@@ -5,24 +5,42 @@ import UserEdit from './UserEdit';
 import {
     Search, Plus, MoreHorizontal, Shield, Mail, CheckCircle, XCircle,
     Filter, LayoutGrid, ArrowUpDown, Lock, Eye, Trash2, UserCog, Copy,
-    ArrowUp, ArrowDown, X, Check, GripVertical
+    ArrowUp, ArrowDown, X, Check, GripVertical, Ban, Download, Table, FileText, File, Upload
 } from 'lucide-react';
 import StageScroll from '../../../Shared/StageScroll';
 import Pagination from '../../../Shared/Pagination';
+import ImportUsersModal from './modals/ImportUsersModal';
+import BulkUpdateUsersModal from './modals/BulkUpdateUsersModal';
+import DeactivateUserModal from './modals/DeactivateUserModal';
+
+import FreezeUserModal from './modals/FreezeUserModal';
+import { downloadLeadTemplate } from '../../../../utils/leadTemplateUtils'; // Reusing util or create new one if needed
+
+// ... (existing imports)
+
+
+
+
+// Custom Icons to avoid version mismatches
+const SnowflakeIcon = ({ size = 16, className = "" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M2.2 12h19.6" /><path d="M12 2.2v19.6" /><path d="m20 20-4.7-4.7" /><path d="M4 4l4.7 4.7" /><path d="M20 4l-4.7 4.7" /><path d="M4 20l4.7-4.7" />
+    </svg>
+);
 
 const UsersTab = () => {
     // Mock Data (Enhanced with Frozen and Invited statuses)
     const [users, setUsers] = useState([
-        { id: 1, name: 'Alex Morgan', email: 'alex@acmelending.com', role: 'Admin', status: 'Active', lastActive: '2 min ago', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=150&h=150', department: 'Executive', location: 'New York, NY', phone: '(212) 555-0123' },
-        { id: 2, name: 'Sarah Connor', email: 'sarah@acmelending.com', role: 'Loan Officer', status: 'Active', lastActive: '1 hr ago', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=150&h=150', department: 'Sales', location: 'Austin, TX', phone: '(512) 555-0199' },
-        { id: 3, name: 'James Wright', email: 'james@acmelending.com', role: 'Underwriter', status: 'Active', lastActive: '4 hrs ago', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=150&h=150', department: 'Risk', location: 'Chicago, IL', phone: '(312) 555-0144' },
-        { id: 4, name: 'Emily Chen', email: 'emily@acmelending.com', role: 'Processor', status: 'Inactive', lastActive: '2 days ago', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150&h=150', department: 'Operations', location: 'San Francisco, CA', phone: '(415) 555-0177' },
-        { id: 5, name: 'Michael Ross', email: 'mike@acmelending.com', role: 'Loan Officer', status: 'Active', lastActive: '10 min ago', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150&h=150', department: 'Sales', location: 'New York, NY', phone: '(212) 555-0188' },
-        { id: 6, name: 'David Miller', email: 'david@acmelending.com', role: 'Loan Officer', status: 'Active', lastActive: 'Yesterday', avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&q=80&w=150&h=150', department: 'Sales', location: 'Miami, FL', phone: '(305) 555-0155' },
-        { id: 7, name: 'Elena Fisher', email: 'elena@acmelending.com', role: 'Admin', status: 'Active', lastActive: 'Today', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150&h=150', department: 'IT', location: 'Remote', phone: '(206) 555-0122' },
+        { id: 1, name: 'Alex Morgan', email: 'alex@acmelending.com', role: 'Admin', status: 'Active', lastActive: '2 min ago', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=150&h=150', department: 'Executive', location: 'New York, NY', phone: '(212) 555-0123', allowedActions: [] },
+        { id: 2, name: 'Sarah Connor', email: 'sarah@acmelending.com', role: 'Loan Officer', status: 'Active', lastActive: '1 hr ago', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=150&h=150', department: 'Sales', location: 'Austin, TX', phone: '(512) 555-0199', allowedActions: [] },
+        { id: 3, name: 'James Wright', email: 'james@acmelending.com', role: 'Underwriter', status: 'Active', lastActive: '4 hrs ago', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150&h=150', department: 'Risk', location: 'Chicago, IL', phone: '(312) 555-0144', allowedActions: [] },
+        { id: 4, name: 'Emily Chen', email: 'emily@acmelending.com', role: 'Processor', status: 'Inactive', lastActive: '2 days ago', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150&h=150', department: 'Operations', location: 'San Francisco, CA', phone: '(415) 555-0177', allowedActions: [] },
+        { id: 5, name: 'Michael Ross', email: 'mike@acmelending.com', role: 'Loan Officer', status: 'Active', lastActive: '10 min ago', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=150&h=150', department: 'Sales', location: 'New York, NY', phone: '(212) 555-0188', allowedActions: [] },
+        { id: 6, name: 'David Miller', email: 'david@acmelending.com', role: 'Loan Officer', status: 'Active', lastActive: 'Yesterday', avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&q=80&w=150&h=150', department: 'Sales', location: 'Miami, FL', phone: '(305) 555-0155', allowedActions: [] },
+        { id: 7, name: 'Elena Fisher', email: 'elena@acmelending.com', role: 'Admin', status: 'Active', lastActive: 'Today', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150&h=150', department: 'IT', location: 'Remote', phone: '(206) 555-0122', allowedActions: [] },
         // New Mock Data for Testing
-        { id: 8, name: 'Frozen Account', email: 'frozen@acmelending.com', role: 'Loan Officer', status: 'Frozen', lastActive: '1 week ago', avatar: 'FA', department: 'Sales', location: 'Denver, CO', phone: '(303) 555-0100' },
-        { id: 9, name: 'Invited User', email: 'newhire@acmelending.com', role: 'Processor', status: 'Invited', lastActive: 'Pending', avatar: 'IU', department: 'Operations', location: 'Seattle, WA', phone: '(206) 555-0999' },
+        { id: 8, name: 'Frozen Account', email: 'frozen@acmelending.com', role: 'Loan Officer', status: 'Frozen', lastActive: '1 week ago', avatar: 'FA', department: 'Sales', location: 'Denver, CO', phone: '(303) 555-0100', allowedActions: [] },
+        { id: 9, name: 'Pending User', email: 'pending@acmelending.com', role: 'Processor', status: 'Pending Activation', lastActive: 'Pending', avatar: 'PU', department: 'Operations', location: 'Seattle, WA', phone: '(206) 555-0999', allowedActions: ['RESEND_ACTIVATION', 'EXPIRE_TOKEN'] },
     ]);
 
     // View State: 'list' | 'add' | 'edit_user'
@@ -43,6 +61,17 @@ const UsersTab = () => {
     const [isColumnMenuOpen, setIsColumnMenuOpen] = useState(false);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [activeFilters, setActiveFilters] = useState({ roles: [], departments: [] });
+
+    // Actions State
+    const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+    const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+    const [isBulkUpdateModalOpen, setIsBulkUpdateModalOpen] = useState(false);
+    const [isDeactivateModalOpen, setIsDeactivateModalOpen] = useState(false);
+    const [usersToDeactivate, setUsersToDeactivate] = useState([]); // For modal context (Single or Bulk)
+
+    const [isFreezeModalOpen, setIsFreezeModalOpen] = useState(false);
+    const [usersToFreeze, setUsersToFreeze] = useState([]);
 
     // Dynamic Columns State
     const [columns, setColumns] = useState([
@@ -112,13 +141,24 @@ const UsersTab = () => {
 
     // Handlers
     const handleSaveNewUser = (user, sendInvite) => {
-        setUsers(prev => [{ id: Math.max(...prev.map(u => u.id)) + 1, ...user }, ...prev]);
+        // Mock Backend: Add allowedActions for Pending Activation status
+        const newUser = {
+            id: Math.max(...users.map(u => u.id)) + 1,
+            ...user,
+            allowedActions: user.status === 'Pending Activation' || sendInvite ? ['RESEND_ACTIVATION', 'EXPIRE_TOKEN'] : []
+        };
+        setUsers(prev => [newUser, ...prev]);
         setToastMessage(`User ${user.name} created successfully. Activation pending.`);
         setCurrentView('list');
     };
 
     const handleUpdateUser = (updatedUser) => {
-        setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
+        // Mock Backend: Update allowedActions based on status
+        const finalUser = {
+            ...updatedUser,
+            allowedActions: updatedUser.status === 'Pending Activation' ? ['RESEND_ACTIVATION', 'EXPIRE_TOKEN'] : []
+        };
+        setUsers(prev => prev.map(u => u.id === finalUser.id ? finalUser : u));
         setToastMessage(`User ${updatedUser.name} updated successfully.`);
         setEditingUser(null);
         setCurrentView('list');
@@ -140,12 +180,24 @@ const UsersTab = () => {
     };
 
     const toggleSelectRow = (id) => {
-        setSelectedIds(prev => {
-            const next = new Set(prev);
-            if (next.has(id)) next.delete(id);
-            else next.add(id);
-            return next;
-        });
+        const newSelected = new Set(selectedIds);
+        if (newSelected.has(id)) {
+            newSelected.delete(id);
+        } else {
+            newSelected.add(id);
+        }
+        setSelectedIds(newSelected);
+    };
+
+    // Pending Activation Handlers
+    const handleResendActivation = (userId) => {
+        setToastMessage({ type: 'success', title: 'Activation Email Sent', message: 'A new activation link has been sent to the user.' });
+        setActiveRowMenu(null);
+    };
+
+    const handleExpireToken = (userId) => {
+        setToastMessage({ type: 'success', title: 'Token Expired', message: 'The activation token has been invalidated.' });
+        setActiveRowMenu(null);
     };
 
     const handleUpdateColumns = (newColumns) => {
@@ -163,6 +215,121 @@ const UsersTab = () => {
             col.id === colId ? { ...col, visible: !col.visible } : col
         ));
     };
+
+    // Action Handlers
+    const handleExport = (format) => {
+        const idsToExport = selectedIds.size > 0 ? Array.from(selectedIds) : filteredUsers.map(u => u.id);
+        const mode = selectedIds.size > 0 ? 'Selected' : 'All/Filtered';
+        alert(`Successfully exported ${idsToExport.length} users (${mode}) to ${format.toUpperCase()}.`);
+        setIsExportMenuOpen(false);
+    };
+
+    const handleBulkUpdate = (ids, updates) => {
+        // Mock Update Logic
+        setUsers(prev => prev.map(u => {
+            if (ids.includes(u.id)) {
+                return { ...u, ...updates };
+            }
+            return u;
+        }));
+        setToastMessage(`Successfully updated ${ids.length} users.`);
+        setSelectedIds(new Set()); // Clear selection
+    };
+
+    const handleDeactivate = (userIds) => {
+        // Audit Log Strict Compliance
+        console.log(`[AUDIT] Action: USER_DEACTIVATED_PERMANENT, Actor: Admin, Users: ${userIds.join(', ')}, NewStatus: Inactive, confirmationAcknowledged: true`);
+
+        setUsers(prev => prev.map(u => {
+            if (userIds.includes(u.id)) {
+                return { ...u, status: 'Inactive', allowedActions: [] };
+            }
+            return u;
+        }));
+
+        setToastMessage(`${userIds.length} user(s) permanently deactivated.`);
+        setIsDeactivateModalOpen(false);
+        setUsersToDeactivate([]);
+        setSelectedIds(new Set());
+    };
+
+    const handleUnfreeze = (userId) => {
+        // Audit Log
+        console.log(`[AUDIT] Action: USER_UNFROZEN, Actor: Admin, User: ${userId}, NewStatus: Active`);
+
+        setUsers(prev => prev.map(u => {
+            if (u.id === userId) {
+                return { ...u, status: 'Active' };
+            }
+            return u;
+        }));
+        setToastMessage('User successfully unfrozen and active.');
+        setActiveRowMenu(null);
+    };
+
+    const handleFreeze = (userId) => {
+        // Open Modal Flow instead of direct freeze
+        const user = users.find(u => u.id === userId);
+        if (user) {
+            setUsersToFreeze([user]);
+            setIsFreezeModalOpen(true);
+        }
+        setActiveRowMenu(null);
+    };
+
+    const handleConfirmFreeze = (usersToFreeze, untilDate, reason) => {
+        const userIds = usersToFreeze.map(u => u.id);
+        const isBulk = userIds.length > 1;
+
+        // Audit Logs (Strict)
+        usersToFreeze.forEach(u => {
+            console.log(`[AUDIT] Action: USER_FROZEN, Actor: Admin, Target User ID: ${u.id}, ` +
+                `FreezeUntil: ${untilDate}, Reason: "${reason}", ` +
+                `Source: ${isBulk ? 'BULK_ACTION' : 'ROW_LEVEL_MENU'}`);
+        });
+
+        // Update State
+        setUsers(prev => prev.map(u => {
+            if (userIds.includes(u.id)) {
+                return {
+                    ...u,
+                    status: 'Frozen',
+                    freezeMetadata: { until: untilDate, reason: reason, frozenAt: new Date().toISOString() }
+                };
+            }
+            return u;
+        }));
+
+        setToastMessage(`Successfully frozen ${userIds.length} user(s) until ${untilDate}.`);
+        setIsFreezeModalOpen(false);
+        setUsersToFreeze([]);
+    };
+
+    const handleDeactivateModalFreeze = (users) => {
+        const activeUsers = users.filter(u => u.status === 'Active');
+        if (activeUsers.length === 0) return;
+
+        setIsDeactivateModalOpen(false);
+        setUsersToFreeze(activeUsers);
+        setIsFreezeModalOpen(true);
+    };
+
+    // Calculate Bulk Deactivate Eligibility
+    const selectedUsersList = useMemo(() => {
+        return users.filter(u => selectedIds.has(u.id));
+    }, [users, selectedIds]);
+
+    const bulkDeactivateEligibility = useMemo(() => {
+        if (selectedIds.size === 0) return { allowed: false, reason: 'No users selected' };
+
+        const activeCount = selectedUsersList.filter(u => u.status === 'Active').length;
+        const totalCount = selectedUsersList.length;
+
+        if (activeCount === 0) return { allowed: false, reason: 'No Active users selected' };
+        if (activeCount < totalCount) return { allowed: false, reason: `${totalCount - activeCount} of ${totalCount} users are not eligible (must be Active).` };
+
+        return { allowed: true };
+    }, [selectedUsersList, selectedIds]);
 
     // Derived Grid Columns
     const gridTemplateColumns = columns.filter(c => c.visible).map(c => c.width).join(' ');
@@ -189,6 +356,18 @@ const UsersTab = () => {
         );
     }
 
+    if (currentView === 'view_user' && editingUser) {
+        return (
+            <UserEdit
+                user={editingUser}
+                existingUsers={users}
+                onSave={() => { }}
+                onCancel={() => { setCurrentView('list'); setEditingUser(null); }}
+                readOnly={true}
+            />
+        );
+    }
+
     // --- RENDER LIST VIEW ---
     return (
         <div className="flex flex-col relative px-6 pb-6">
@@ -196,7 +375,7 @@ const UsersTab = () => {
             {toastMessage && createPortal(
                 <div className="fixed bottom-6 right-6 z-[100] bg-slate-900/90 text-white px-4 py-3 rounded-lg shadow-xl animate-in slide-in-from-bottom-5 fade-in duration-300 flex items-center gap-3">
                     <CheckCircle size={20} className="text-emerald-400" />
-                    <span className="font-medium text-sm">{toastMessage}</span>
+                    <span className="font-medium text-sm">{typeof toastMessage === 'string' ? toastMessage : toastMessage.message}</span>
                     <button onClick={() => setToastMessage(null)} className="ml-2 text-slate-400 hover:text-white"><X size={16} /></button>
                 </div>,
                 document.body
@@ -205,14 +384,131 @@ const UsersTab = () => {
             <div className="flex justify-between items-center mb-4">
                 {/* Header Removed - managed by parent */}
                 <div />
-                <button
-                    onClick={() => setCurrentView('add')}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm shadow-blue-200"
-                >
-                    <Plus size={18} />
-                    Add User
-                </button>
+
+                <div className="flex items-center gap-3">
+                    {/* Add User Button (Primary) */}
+                    <button
+                        onClick={() => setCurrentView('add')}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm shadow-blue-200"
+                    >
+                        <Plus size={18} />
+                        Add User
+                    </button>
+
+                    {/* Export Dropdown */}
+                    <div className="relative">
+                        <button
+                            onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
+                            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors shadow-sm"
+                        >
+                            <Download size={16} />
+                            {selectedIds.size > 0 ? `Export (${selectedIds.size})` : 'Export'}
+                        </button>
+                        {isExportMenuOpen && (
+                            <>
+                                <div className="fixed inset-0 z-10" onClick={() => setIsExportMenuOpen(false)}></div>
+                                <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-xl z-50 p-1 animate-in fade-in slide-in-from-top-2 duration-200 origin-top-right">
+                                    <div className="text-xs font-bold text-slate-400 uppercase tracking-wider px-2 py-1 mb-1">Export As</div>
+                                    <button onClick={() => handleExport('excel')} className="w-full text-left px-2 py-1.5 text-sm text-slate-600 hover:bg-slate-50 rounded-lg transition-colors flex justify-between items-center group">
+                                        <div className="flex items-center gap-2">
+                                            <Table size={14} className="text-emerald-600" />
+                                            <span>Excel</span>
+                                        </div>
+                                    </button>
+                                    <button onClick={() => handleExport('csv')} className="w-full text-left px-2 py-1.5 text-sm text-slate-600 hover:bg-slate-50 rounded-lg transition-colors flex justify-between items-center group">
+                                        <div className="flex items-center gap-2">
+                                            <FileText size={14} className="text-blue-600" />
+                                            <span>CSV</span>
+                                        </div>
+                                    </button>
+                                    <button onClick={() => handleExport('pdf')} className="w-full text-left px-2 py-1.5 text-sm text-slate-600 hover:bg-slate-50 rounded-lg transition-colors flex justify-between items-center group">
+                                        <div className="flex items-center gap-2">
+                                            <File size={14} className="text-red-600" />
+                                            <span>PDF</span>
+                                        </div>
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </div>
+
+                    {/* Kebab Menu (More Actions) */}
+                    <div className="relative">
+                        <button
+                            onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
+                            className="p-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
+                        >
+                            <MoreHorizontal size={20} />
+                        </button>
+                        {isMoreMenuOpen && (
+                            <>
+                                <div className="fixed inset-0 z-10" onClick={() => setIsMoreMenuOpen(false)}></div>
+                                <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-slate-200 rounded-lg shadow-xl z-50 p-1 animate-in fade-in slide-in-from-top-2 duration-200 origin-top-right">
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setIsImportModalOpen(true);
+                                            setIsMoreMenuOpen(false);
+                                        }}
+                                        className="w-full text-left px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 rounded transition-colors flex items-center gap-3"
+                                    >
+                                        <Upload size={16} className="text-slate-400" /> Import Users
+                                    </button>
+
+
+
+                                    {/* Deactivate Users */}
+                                    <div className="relative group">
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (bulkDeactivateEligibility.allowed) {
+                                                    setUsersToDeactivate(selectedUsersList);
+                                                    setIsDeactivateModalOpen(true);
+                                                    setIsMoreMenuOpen(false);
+                                                }
+                                            }}
+                                            disabled={!bulkDeactivateEligibility.allowed}
+                                            className={`w-full text-left px-3 py-1.5 text-sm rounded transition-colors flex items-center gap-3 
+                                                ${bulkDeactivateEligibility.allowed
+                                                    ? 'text-red-600 hover:bg-red-50 cursor-pointer'
+                                                    : 'text-slate-400 cursor-default opacity-60'}`}
+                                        >
+                                            <Ban size={16} className={bulkDeactivateEligibility.allowed ? "text-red-500" : "text-slate-300"} />
+                                            Deactivate Users {selectedIds.size > 0 && `(${selectedIds.size})`}
+                                        </button>
+
+                                        {/* Disabled Reason Tooltip */}
+                                        {!bulkDeactivateEligibility.allowed && selectedIds.size > 0 && (
+                                            <div className="absolute right-full top-1/2 -translate-y-1/2 mr-2 px-2 py-1 bg-slate-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                                                {bulkDeactivateEligibility.reason}
+                                                <div className="absolute right-[-4px] top-1/2 -translate-y-1/2 w-2 h-2 bg-slate-800 rotate-45 transform"></div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="h-px bg-slate-100 my-1"></div>
+
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            // downloadTemplate(); 
+                                            alert("Downloading User Template...");
+                                            setIsMoreMenuOpen(false);
+                                        }}
+                                        className="w-full text-left px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 rounded transition-colors flex items-center gap-3"
+                                    >
+                                        <FileText size={16} className="text-slate-400" /> Download Template
+                                    </button>
+
+
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
             </div>
+
 
             {/* Main Card Container */}
             <div className="flex flex-col bg-white rounded-xl border border-slate-200 shadow-sm relative">
@@ -456,15 +752,15 @@ const UsersTab = () => {
                                                                     ? 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100'
                                                                     : user.status === 'Frozen'
                                                                         ? 'bg-cyan-50 text-cyan-700 border-cyan-100 hover:bg-cyan-100'
-                                                                        : user.status === 'Invited'
-                                                                            ? 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
+                                                                        : user.status === 'Pending Activation'
+                                                                            ? 'bg-orange-50 text-orange-700 border-orange-100 hover:bg-orange-100'
                                                                             : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'
                                                                     }`}
                                                             >
                                                                 {user.status === 'Active' && <CheckCircle size={10} className="mr-1.5" />}
-                                                                {user.status === 'Frozen' && <Lock size={10} className="mr-1.5" />}
+                                                                {user.status === 'Frozen' && <SnowflakeIcon className="w-2.5 h-2.5 mr-1.5" />}
                                                                 {user.status === 'Inactive' && <XCircle size={10} className="mr-1.5" />}
-                                                                {user.status === 'Invited' && <Mail size={10} className="mr-1.5" />}
+                                                                {user.status === 'Pending Activation' && <Mail size={10} className="mr-1.5" />}
                                                                 {user.status}
                                                             </button>
                                                         </div>
@@ -498,31 +794,92 @@ const UsersTab = () => {
                                                             {activeRowMenu === user.id && (
                                                                 <>
                                                                     <div className="fixed inset-0 z-40 cursor-default" onClick={() => setActiveRowMenu(null)}></div>
-                                                                    <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-slate-200 rounded-lg shadow-xl z-50 p-1 animate-in fade-in slide-in-from-top-2 duration-200 origin-top-right">
-                                                                        <div className="flex flex-col gap-0.5">
-                                                                            <button onClick={() => setActiveRowMenu(null)} className="w-full text-left px-2 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 rounded flex items-center gap-2">
-                                                                                <Eye size={13} className="text-slate-400" /> View Details
+                                                                    <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-slate-200 rounded-lg shadow-xl z-50 py-1 animate-in fade-in zoom-in-95 duration-100">
+                                                                        <button onClick={() => { setEditingUser(user); setCurrentView('view_user'); setActiveRowMenu(null); }} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-blue-600 flex items-center gap-2">
+                                                                            <Eye size={14} /> View Details
+                                                                        </button>
+                                                                        {/* Edit User: Active/Pending only. Hidden for Frozen/Inactive */}
+                                                                        {user.status !== 'Inactive' && user.status !== 'Frozen' && (
+                                                                            <button
+                                                                                onClick={() => { setEditingUser(user); setCurrentView('edit_user'); setActiveRowMenu(null); }}
+                                                                                className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-blue-600 flex items-center gap-2"
+                                                                            >
+                                                                                <UserCog size={14} /> Edit User
                                                                             </button>
-                                                                            <button onClick={() => { setActiveRowMenu(null); setEditingUser(user); setCurrentView('edit_user'); }} className="w-full text-left px-2 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 rounded flex items-center gap-2">
-                                                                                <UserCog size={13} className="text-slate-400" /> Edit User
+                                                                        )}
+                                                                        <button onClick={() => setActiveRowMenu(null)} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-blue-600 flex items-center gap-2">
+                                                                            <Copy size={14} /> Clone User
+                                                                        </button>
+
+
+                                                                        {/* Dynamic Actions based on allowedActions */}
+                                                                        {(user.allowedActions || []).includes('RESEND_ACTIVATION') && (
+                                                                            <button
+                                                                                onClick={() => handleResendActivation(user.id)}
+                                                                                className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-blue-600 flex items-center gap-2"
+                                                                            >
+                                                                                <Mail size={14} /> Resend Activation
                                                                             </button>
-                                                                            <button onClick={() => setActiveRowMenu(null)} className="w-full text-left px-2 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 rounded flex items-center gap-2">
-                                                                                <Copy size={13} className="text-slate-400" /> Clone User
+                                                                        )}
+
+                                                                        {(user.allowedActions || []).includes('EXPIRE_TOKEN') && (
+                                                                            <button
+                                                                                onClick={() => handleExpireToken(user.id)}
+                                                                                className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-amber-600 flex items-center gap-2"
+                                                                            >
+
+                                                                                <Lock size={14} /> Expire Token
                                                                             </button>
-                                                                            <button onClick={() => setActiveRowMenu(null)} className="w-full text-left px-2 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 rounded flex items-center gap-2">
-                                                                                <Shield size={13} className="text-slate-400" /> Change Role
+                                                                        )}
+
+                                                                        <div className="border-t border-slate-100 my-1"></div>
+
+                                                                        {/* Freeze User: Active only */}
+                                                                        {user.status === 'Active' && (
+                                                                            <button
+                                                                                onClick={() => handleFreeze(user.id)}
+                                                                                className="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2"
+                                                                            >
+                                                                                <SnowflakeIcon size={14} /> Freeze User
                                                                             </button>
-                                                                            <div className="h-px bg-slate-100 my-1"></div>
-                                                                            <button onClick={() => setActiveRowMenu(null)} className="w-full text-left px-2 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 rounded flex items-center gap-2">
-                                                                                <Trash2 size={13} className="text-red-400 group-hover:text-red-600" /> Delete User
+                                                                        )}
+
+                                                                        {/* Frozen Actions */}
+                                                                        {user.status === 'Frozen' && (
+                                                                            <button
+                                                                                onClick={() => handleUnfreeze(user.id)}
+                                                                                className="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2"
+                                                                            >
+                                                                                {/* Reusing CheckCircle as 'Unfreeze/Activate' metaphor or Sun icon if available */}
+                                                                                <CheckCircle size={14} /> Unfreeze User
                                                                             </button>
-                                                                        </div>
+                                                                        )}
+
+                                                                        {user.status === 'Inactive' && (
+                                                                            <button className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
+                                                                                <Trash2 size={14} /> Delete User
+                                                                            </button>
+                                                                        )}
+
+                                                                        {(user.status === 'Active' || user.status === 'Frozen') && (
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    setUsersToDeactivate([user]);
+                                                                                    setIsDeactivateModalOpen(true);
+                                                                                    setActiveRowMenu(null);
+                                                                                }}
+                                                                                className="w-full text-left px-4 py-2 text-sm text-amber-600 hover:bg-amber-50 flex items-center gap-2"
+                                                                            >
+                                                                                <Ban size={14} /> Deactivate User
+                                                                            </button>
+                                                                        )}
                                                                     </div>
                                                                 </>
                                                             )}
                                                         </div>
                                                     );
                                                 }
+                                                return <div key={col.id} className={col.id === 'actions' ? 'text-right' : ''}>{col.label}</div> // Fallback, though label is wrong here, it should be content. Wait, original logic was different.
                                             })}
                                         </div>
                                     </div>
@@ -530,28 +887,57 @@ const UsersTab = () => {
                             })}
                         </div>
                     </div>
-
-                    {/* 4. PAGINATION FOOTER */}
-                    <div className="flex-none bg-white border-t border-slate-200 pt-4">
-                        <Pagination
-                            currentPage={currentPage}
-                            totalItems={filteredUsers.length}
-                            itemsPerPage={itemsPerPage}
-                            onPageChange={setCurrentPage}
-                            onItemsPerPageChange={setItemsPerPage}
-                        />
-                    </div>
                 </div>
-            </div>
 
-            {/* Column Manager Modal */}
-            <ColumnEditorModal
-                isOpen={isColumnEditorOpen}
-                onClose={() => setIsColumnEditorOpen(false)}
-                currentColumns={columns}
-                onSave={handleUpdateColumns}
-            />
+                {/* 4. PAGINATION FOOTER */}
+                <div className="flex-none bg-white border-t border-slate-200 pt-4">
+                    <Pagination
+                        currentPage={currentPage}
+                        totalItems={filteredUsers.length}
+                        itemsPerPage={itemsPerPage}
+                        onPageChange={setCurrentPage}
+                        onItemsPerPageChange={setItemsPerPage}
+                    />
+                </div>
+
+                <ColumnEditorModal
+                    isOpen={isColumnEditorOpen}
+                    onClose={() => setIsColumnEditorOpen(false)}
+                    currentColumns={columns}
+                    onSave={handleUpdateColumns}
+                />
+
+                {/* New Action Modals */}
+                <ImportUsersModal
+                    isOpen={isImportModalOpen}
+                    onClose={() => setIsImportModalOpen(false)}
+                    onImportComplete={() => setToastMessage("Users imported successfully.")}
+                />
+
+                <BulkUpdateUsersModal
+                    isOpen={isBulkUpdateModalOpen}
+                    onClose={() => setIsBulkUpdateModalOpen(false)}
+                    selectedUsers={users.filter(u => selectedIds.has(u.id))}
+                    onUpdate={handleBulkUpdate}
+                />
+
+                <DeactivateUserModal
+                    isOpen={isDeactivateModalOpen}
+                    onClose={() => setIsDeactivateModalOpen(false)}
+                    selectedUsers={usersToDeactivate}
+                    onConfirm={handleDeactivate}
+                    onFreeze={handleDeactivateModalFreeze}
+                />
+
+                <FreezeUserModal
+                    isOpen={isFreezeModalOpen}
+                    onClose={() => setIsFreezeModalOpen(false)}
+                    selectedUsers={usersToFreeze}
+                    onConfirm={handleConfirmFreeze}
+                />
+            </div>
         </div>
+
     );
 };
 

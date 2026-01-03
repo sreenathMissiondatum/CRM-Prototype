@@ -23,9 +23,9 @@ const AddUser = ({ onSave, onCancel, existingUsers = [] }) => {
         branches: [],
 
         // Security & Status
-        status: 'Active',
-        mfaEnabled: true,
-        portalAccess: true,
+        status: 'Pending Activation', // MVP Rule: Always Pending Activation
+        userType: 'Internal',         // MVP Rule: Default to Internal
+        portalAccess: false,          // MVP Rule: Default Off for Internal
 
         // Preferences
         locale: 'en-US',
@@ -59,9 +59,7 @@ const AddUser = ({ onSave, onCancel, existingUsers = [] }) => {
         }
 
         if (['departments', 'branches', 'teams'].includes(field)) {
-            // Requirement: At least one Dept, Branch, OR Team must be selected (combined check usually, but per field here implies individual if marked required, prompt says "At least one... must be selected" - interpreting as collective or individual. Let's be lenient: require at least one Dept).
-            // Actually prompt says: "At least one Department, Branch, or Team must be selected".
-            // We'll validate this on save.
+            // Requirement: At least one Dept, Branch, OR Team must be selected
         }
         return null;
     };
@@ -72,6 +70,18 @@ const AddUser = ({ onSave, onCancel, existingUsers = [] }) => {
         const error = validate(field, value);
         if (error) setErrors(prev => ({ ...prev, [field]: error }));
         else setErrors(prev => { const n = { ...prev }; delete n[field]; return n; });
+    };
+
+    // Special handler for User Type to enforce Portal Access rules
+    const handleUserTypeChange = (type) => {
+        const isInternal = type === 'Internal';
+
+        setFormData(prev => ({
+            ...prev,
+            userType: type,
+            // Rule: Internal -> Portal Access forced OFF. External -> Portal Access default ON.
+            portalAccess: isInternal ? false : true
+        }));
     };
 
     // Multi-Select Helper
@@ -110,7 +120,7 @@ const AddUser = ({ onSave, onCancel, existingUsers = [] }) => {
             ...formData,
             name: `${formData.firstName} ${formData.lastName}`,
             avatar: `${formData.firstName[0]}${formData.lastName[0]}`.toUpperCase(),
-            status: 'Pending Activation',
+            // status is already set in state and non-editable
             lastActive: '—',
             department: formData.departments[0] || 'Unassigned', // Main dept for table display
             location: formData.branches[0] || 'Remote', // Main location
@@ -168,27 +178,69 @@ const AddUser = ({ onSave, onCancel, existingUsers = [] }) => {
                                 <Shield size={16} className="text-emerald-500" /> Security & Access
                             </h3>
 
-                            <div className="space-y-5">
-                                <div className="flex items-center justify-between">
-                                    <label className="text-sm font-medium text-slate-700">Account Status</label>
-                                    <div className="flex bg-slate-100 p-1 rounded-lg">
-                                        <button
-                                            onClick={() => handleChange('status', 'Active')}
-                                            className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${formData.status === 'Active' ? 'bg-white shadow text-emerald-600' : 'text-slate-500'}`}
-                                        >
-                                            Active
-                                        </button>
-                                        <button
-                                            onClick={() => handleChange('status', 'Inactive')}
-                                            className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${formData.status === 'Inactive' ? 'bg-white shadow text-slate-600' : 'text-slate-500'}`}
-                                        >
-                                            Inactive
-                                        </button>
+                            <div className="space-y-6">
+                                {/* Informational Banner */}
+                                <div className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                                    <Info className="text-blue-600 shrink-0 mt-0.5" size={16} />
+                                    <div>
+                                        <p className="text-sm text-blue-800 font-medium">Pending Activation</p>
+                                        <p className="text-xs text-blue-600 leading-relaxed mt-0.5">
+                                            Users are created in a <span className="font-semibold">Pending Activation</span> state. They will become active after completing activation.
+                                        </p>
                                     </div>
                                 </div>
 
-                                <Toggle label="MFA Enabled" desc="Require 2FA for login" checked={formData.mfaEnabled} onChange={v => handleChange('mfaEnabled', v)} />
-                                <Toggle label="Portal Access" desc="Allow access to external portal" checked={formData.portalAccess} onChange={v => handleChange('portalAccess', v)} />
+                                {/* User Type Selection */}
+                                <div className="space-y-3">
+                                    <label className="text-sm font-semibold text-slate-700">User Type</label>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <label className={`
+                                            flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all
+                                            ${formData.userType === 'Internal' ? 'bg-blue-50 border-blue-200 ring-1 ring-blue-500/20' : 'bg-white border-slate-200 hover:border-slate-300'}
+                                        `}>
+                                            <input
+                                                type="radio"
+                                                name="userType"
+                                                value="Internal"
+                                                checked={formData.userType === 'Internal'}
+                                                onChange={() => handleUserTypeChange('Internal')}
+                                                className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                                            />
+                                            <div className="flex flex-col">
+                                                <span className={`text-sm font-medium ${formData.userType === 'Internal' ? 'text-blue-900' : 'text-slate-700'}`}>Internal</span>
+                                                <span className="text-[10px] text-slate-500">Employee access</span>
+                                            </div>
+                                        </label>
+
+                                        <label className={`
+                                            flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all
+                                            ${formData.userType === 'External' ? 'bg-blue-50 border-blue-200 ring-1 ring-blue-500/20' : 'bg-white border-slate-200 hover:border-slate-300'}
+                                        `}>
+                                            <input
+                                                type="radio"
+                                                name="userType"
+                                                value="External"
+                                                checked={formData.userType === 'External'}
+                                                onChange={() => handleUserTypeChange('External')}
+                                                className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                                            />
+                                            <div className="flex flex-col">
+                                                <span className={`text-sm font-medium ${formData.userType === 'External' ? 'text-blue-900' : 'text-slate-700'}`}>External</span>
+                                                <span className="text-[10px] text-slate-500">Partner/Vendor access</span>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                {/* Portal Access Toggle */}
+                                <div className={`transition-opacity duration-200 ${formData.userType === 'Internal' ? 'opacity-60 pointer-events-none' : 'opacity-100'}`}>
+                                    <Toggle
+                                        label="Portal Access"
+                                        desc={formData.userType === 'Internal' ? "Not available for internal users" : "Allow access to external portal"}
+                                        checked={formData.portalAccess}
+                                        onChange={v => handleChange('portalAccess', v)}
+                                    />
+                                </div>
                             </div>
                         </section>
                     </div>

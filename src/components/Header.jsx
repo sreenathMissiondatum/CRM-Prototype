@@ -1,12 +1,12 @@
 import React from 'react';
 import { Bell, Search, User } from 'lucide-react';
 
-const Header = ({ onNavigate }) => {
+const Header = ({ onNavigate, user }) => {
     return (
         <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 pl-28 sticky top-0 z-50">
             <div>
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                    Good Morning, Alex
+                    Good Morning, {user?.firstName}
                 </h1>
                 <p className="text-slate-500 text-sm">Here's what's happening today.</p>
             </div>
@@ -31,12 +31,16 @@ const Header = ({ onNavigate }) => {
                     onClick={() => onNavigate && onNavigate('profile')}
                 >
                     <div className="text-right hidden sm:block">
-                        <p className="text-sm font-medium text-slate-900">Alex Morgan</p>
-                        <p className="text-xs text-slate-500">Loan Officer</p>
+                        <p className="text-sm font-medium text-slate-900">{user?.firstName} {user?.lastName}</p>
+                        <p className="text-xs text-slate-500">{user?.jobTitle}</p>
                     </div>
-                    <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-medium">
-                        AM
-                    </div>
+                    {user?.profilePhotoUrl ? (
+                        <img src={user.profilePhotoUrl} alt="Profile" className="w-10 h-10 rounded-full object-cover border border-slate-200" />
+                    ) : (
+                        <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-medium">
+                            {user?.firstName?.[0]}{user?.lastName?.[0]}
+                        </div>
+                    )}
                 </div>
             </div>
         </header>
