@@ -105,26 +105,17 @@ const RoleCapabilities = ({
 
                     {!isRole && (
                         <div className="mb-6 space-y-4">
-                            {/* Additive Access Warning */}
-                            {entity.applicableRoles && entity.applicableRoles.length > 0 && (
-                                <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-lg flex gap-3 text-indigo-900 text-sm shadow-sm">
-                                    <Info size={20} className="shrink-0 text-indigo-600 mt-0.5" />
-                                    <div>
-                                        <h4 className="font-bold mb-1 text-indigo-700">Additive Access Only</h4>
-                                        <p className="leading-relaxed">Permissions defined here are added on top of the user's base Role permissions. You cannot restrict access (e.g., unchecking 'Read') that a user already has from their Role.</p>
-                                    </div>
+                            {/* MVP Honest Banner */}
+                            <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg flex gap-3 text-blue-900 text-sm shadow-sm">
+                                <Info size={20} className="shrink-0 text-blue-600 mt-0.5" />
+                                <div>
+                                    <h4 className="font-bold mb-1 text-blue-700">Permission Set Configuration</h4>
+                                    <p className="leading-relaxed">
+                                        Configure the permissions included in this set.
+                                        In this MVP, these permissions are evaluated together with the user's role at runtime.
+                                    </p>
                                 </div>
-                            )}
-
-                            {/* Baseline Context Display */}
-                            {baselineRole && (
-                                <div className="flex items-center gap-2 text-sm text-slate-500 bg-slate-50 px-3 py-2 rounded-md border border-slate-200 inline-block">
-                                    <span>Viewing effective permissions for role:</span>
-                                    <span className="font-bold text-slate-800 flex items-center gap-1">
-                                        <Shield size={14} /> {baselineRole.name}
-                                    </span>
-                                </div>
-                            )}
+                            </div>
                         </div>
                     )}
 

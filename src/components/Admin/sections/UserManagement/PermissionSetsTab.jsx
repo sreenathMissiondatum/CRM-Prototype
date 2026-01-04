@@ -1,85 +1,25 @@
 import React, { useState } from 'react';
-import { Shield, Plus, MoreHorizontal, Edit2, Search, Trash2, CheckCircle2, Save, ArrowLeft, Info, Copy, Check } from 'lucide-react';
+import { Shield, Plus, Edit2, Trash2, Save, ArrowLeft, Info, Check, User, Users, X, Search } from 'lucide-react';
 import RoleCapabilities from './RoleCapabilities';
+import { MOCK_PERMISSION_SETS, MOCK_USERS_SHORT, MOCK_ASSIGNMENTS } from './mockPermissionData';
 
-// --- Placeholder Data for Roles (Context) ---
-// in a real app, this would come from a global store or API
+// --- MOCK ROLES (Kept local for now as they are just metadata filters) ---
 const MOCK_ROLES = [
-    {
-        id: 'r1',
-        name: 'System Administrator',
-        capabilities: {
-            leads: { create: true, read: true, update: true, delete: true },
-            loans: { create: true, read: true, update: true, delete: true },
-            tasks: { create: true, read: true, update: true, delete: true },
-            documents: { create: true, read: true, update: true, delete: true },
-            reports: { create: true, read: true, update: true, delete: true },
-            calendar: { create: true, read: true, update: true, delete: true },
-        }
-    },
-    {
-        id: 'r2',
-        name: 'Branch Manager',
-        capabilities: {
-            leads: { create: true, read: true, update: true, delete: false },
-            loans: { create: true, read: true, update: true, delete: false },
-            tasks: { create: true, read: true, update: true, delete: true },
-            documents: { create: true, read: true, update: true, delete: false },
-            reports: { create: false, read: true, update: false, delete: false },
-            calendar: { create: true, read: true, update: true, delete: true },
-        }
-    },
-    {
-        id: 'r3',
-        name: 'Loan Officer',
-        capabilities: {
-            leads: { create: true, read: true, update: false, delete: false },
-            loans: { create: true, read: true, update: true, delete: false }, // Can update own loans
-            tasks: { create: true, read: true, update: true, delete: false },
-            documents: { create: true, read: true, update: false, delete: false },
-            reports: { create: false, read: false, update: false, delete: false },
-            calendar: { create: true, read: true, update: true, delete: false },
-        }
-    },
-];
-
-const INITIAL_SETS = [
-    {
-        id: 1,
-        name: 'Marketing Manager',
-        description: 'Access to marketing campaigns and email templates.',
-        users: 2,
-        lastModified: '2023-11-15',
-        applicableRoles: ['r2', 'r3'],
-        status: 'Active'
-    },
-    {
-        id: 2,
-        name: 'Compliance Auditor',
-        description: 'Read-only access to all loan files for audit purposes.',
-        users: 1,
-        lastModified: '2023-12-01',
-        applicableRoles: ['r1', 'r2', 'r3'],
-        status: 'Active'
-    },
-    {
-        id: 3,
-        name: 'Branch Manager Override',
-        description: 'Ability to override rate locks for specific branch managers.',
-        users: 5,
-        lastModified: '2023-10-20',
-        applicableRoles: ['r2'],
-        status: 'Active'
-    },
+    { id: 'r1', name: 'System Administrator' },
+    { id: 'r2', name: 'Branch Manager' },
+    { id: 'r3', name: 'Loan Officer' },
 ];
 
 const PermissionSetsTab = () => {
     const [mode, setMode] = useState('list'); // 'list', 'create', 'edit', 'capabilities'
-    const [sets, setSets] = useState(INITIAL_SETS);
+    const [sets, setSets] = useState(MOCK_PERMISSION_SETS);
+    const [assignments, setAssignments] = useState(MOCK_ASSIGNMENTS);
     const [selectedSet, setSelectedSet] = useState(null);
     const [formData, setFormData] = useState({ name: '', description: '', applicableRoles: [] });
-    // Baseline context state
-    const [baselineRoleId, setBaselineRoleId] = useState('');
+
+    // Assignment Modal State
+    const [showAssignmentModal, setShowAssignmentModal] = useState(false);
+    const [tempAssignments, setTempAssignments] = useState([]); // Array of user IDs
 
     // --- Actions ---
     const handleCreate = () => {
@@ -110,13 +50,14 @@ const PermissionSetsTab = () => {
     };
 
     const saveSet = (targetNextStep) => {
-        // Validation
         if (!formData.name || !formData.description) return;
 
-        let newSetId;
+        let newSetId = selectedSet ? selectedSet.id : Date.now();
+        let nextSetObject;
+
         if (mode === 'create') {
-            const newSet = {
-                id: Date.now(),
+            nextSetObject = {
+                id: newSetId,
                 name: formData.name,
                 description: formData.description,
                 applicableRoles: formData.applicableRoles,
@@ -125,16 +66,10 @@ const PermissionSetsTab = () => {
                 capabilities: null,
                 status: 'Draft'
             };
-            setSets([...sets, newSet]);
-            newSetId = newSet.id;
-
-            // Toasts or feedback could go here
-            if (targetNextStep === 'list') {
-                // alert("Permission Set saved as Draft.");
-            }
+            setSets([...sets, nextSetObject]);
         } else {
             // Edit Mode
-            const updatedSets = sets.map(s =>
+            setSets(sets.map(s =>
                 s.id === selectedSet.id
                     ? {
                         ...s,
@@ -144,35 +79,13 @@ const PermissionSetsTab = () => {
                         lastModified: new Date().toISOString().split('T')[0]
                     }
                     : s
-            );
-            setSets(updatedSets);
-            newSetId = selectedSet.id;
+            ));
+            nextSetObject = { ...selectedSet, ...formData, id: newSetId };
         }
 
         if (targetNextStep === 'capabilities') {
-            // For 'create' optimistic update needed if we rely on state immediately, 
-            // but for simplicity we can construct the next state object
-            const nextSetObject = mode === 'create'
-                ? {
-                    id: newSetId,
-                    name: formData.name,
-                    description: formData.description,
-                    applicableRoles: formData.applicableRoles,
-                    users: 0,
-                    status: 'Draft',
-                    capabilities: null
-                }
-                : { ...selectedSet, ...formData };
-
             setSelectedSet(nextSetObject);
-
-            // Default baseline to first applicable role if available, otherwise empty (No Context)
-            if (formData.applicableRoles.length > 0) {
-                setBaselineRoleId(formData.applicableRoles[0]);
-            } else {
-                setBaselineRoleId('');
-            }
-            setMode('capabilities');
+            setMode('capabilities'); // Pure mode, no baseline
         } else {
             setMode('list');
         }
@@ -181,25 +94,22 @@ const PermissionSetsTab = () => {
     const handleSaveDraft = () => saveSet('list');
     const handleContinue = () => saveSet('capabilities');
 
-    const handleManageAccess = (set) => {
+    const handleConfigurePermissions = (set) => {
         setSelectedSet(set);
-        // Default baseline to first applicable role
-        if (set.applicableRoles && set.applicableRoles.length > 0) {
-            setBaselineRoleId(set.applicableRoles[0]);
-        } else {
-            setBaselineRoleId('');
-        }
         setMode('capabilities');
     }
 
     const handleDelete = (id) => {
         if (window.confirm("Are you sure you want to delete this permission set? This will remove access for assigned users.")) {
             setSets(sets.filter(s => s.id !== id));
+            // Cleanup assignments
+            const newAssignments = { ...assignments };
+            delete newAssignments[id];
+            setAssignments(newAssignments);
         }
     };
 
     const handleSaveCapabilities = (setId, newCapabilities) => {
-        // Audit Log Mock
         console.group(`[AUDIT] Permission Set Updated: ${selectedSet.name}`);
         console.log(`timestamp: ${new Date().toISOString()}`);
         console.log(`user: Current Admin User`);
@@ -207,27 +117,54 @@ const PermissionSetsTab = () => {
         console.log(`target_set_id: ${setId}`);
         console.groupEnd();
 
-        const updatedSets = sets.map(s =>
+        setSets(sets.map(s =>
             s.id === setId ? {
                 ...s,
                 capabilities: newCapabilities,
                 lastModified: new Date().toISOString().split('T')[0],
-                status: 'Active' // Capabilities saved -> Active
+                status: 'Active'
             } : s
-        );
-        setSets(updatedSets);
+        ));
         setMode('list');
     };
 
+    // --- Assignment Logic ---
+    const openAssignmentModal = (set) => {
+        setSelectedSet(set);
+        setTempAssignments(assignments[set.id] || []);
+        setShowAssignmentModal(true);
+    };
+
+    const toggleAssignment = (userId) => {
+        setTempAssignments(prev => prev.includes(userId)
+            ? prev.filter(id => id !== userId)
+            : [...prev, userId]
+        );
+    };
+
+    const saveAssignments = () => {
+        const setId = selectedSet.id;
+        setAssignments(prev => ({
+            ...prev,
+            [setId]: tempAssignments
+        }));
+
+        // Update user count in the set object for display
+        setSets(sets.map(s => s.id === setId ? { ...s, users: tempAssignments.length } : s));
+
+        console.log(`[AUDIT] Assigned Users to Permission Set ${setId}:`, tempAssignments);
+        setShowAssignmentModal(false);
+    };
+
     return (
-        <div className="flex flex-col relative bg-slate-50">
+        <div className="flex flex-col relative bg-slate-50 min-h-[600px]">
             {/* --- LIST MODE --- */}
             {mode === 'list' && (
                 <>
                     <div className="flex justify-between items-center mb-6 shrink-0 px-8 pt-6">
                         <div>
                             <h2 className="text-xl font-bold text-slate-900">Permission Sets</h2>
-                            <p className="text-sm text-slate-500">Provide specific, additive access rights beyond assigned roles.</p>
+                            <p className="text-sm text-slate-500">Create bundles of permissions to assign to users.</p>
                         </div>
                         <button
                             onClick={handleCreate}
@@ -275,15 +212,19 @@ const PermissionSetsTab = () => {
                                         {set.description || "No description provided."}
                                     </p>
 
-                                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-                                        <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 px-2.5 py-1.5 rounded-md">
-                                            <span className="font-bold text-slate-700 mb-0.5">{set.users}</span> assigned
-                                        </div>
+                                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-2">
                                         <button
-                                            onClick={() => handleManageAccess(set)}
-                                            className="text-sm font-bold text-blue-600 hover:text-blue-800 hover:underline"
+                                            onClick={() => openAssignmentModal(set)}
+                                            className="flex items-center gap-2 text-xs text-slate-600 bg-slate-50 hover:bg-slate-100 px-3 py-2 rounded-lg transition-colors border border-slate-100"
                                         >
-                                            Manage Access
+                                            <Users size={14} />
+                                            <span className="font-bold">{set.users}</span> assigned
+                                        </button>
+                                        <button
+                                            onClick={() => handleConfigurePermissions(set)}
+                                            className="text-sm font-bold text-blue-600 hover:text-blue-800 hover:underline px-2"
+                                        >
+                                            Configure Permissions
                                         </button>
                                     </div>
                                 </div>
@@ -317,13 +258,12 @@ const PermissionSetsTab = () => {
 
                     <div className="flex-1 overflow-y-auto p-8">
                         <div className="max-w-2xl mx-auto space-y-8">
-
-                            {/* Info Banner */}
-                            <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-lg flex gap-3 text-indigo-800 text-sm">
+                            {/* MVP Honest Banner */}
+                            <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg flex gap-3 text-blue-800 text-sm">
                                 <Info size={20} className="shrink-0 mt-0.5" />
                                 <div>
-                                    <h4 className="font-bold mb-1">Additive Access Only</h4>
-                                    <p>Permission Sets grant additional access on top of a user’s role. They cannot remove or restrict access a user already has. Configure capabilities in the next step.</p>
+                                    <h4 className="font-bold mb-1">Permission Bundles (MVP)</h4>
+                                    <p>Permission Sets define additional permissions that can be assigned to users. In this MVP, permissions are evaluated together with the user's role.</p>
                                 </div>
                             </div>
 
@@ -336,7 +276,7 @@ const PermissionSetsTab = () => {
                                         value={formData.name}
                                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                         className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all font-medium text-lg"
-                                        placeholder="e.g., Loan Officer - Jumbo Specialist"
+                                        placeholder="e.g., Marketing Access"
                                         autoFocus
                                     />
                                 </div>
@@ -346,14 +286,14 @@ const PermissionSetsTab = () => {
                                         value={formData.description}
                                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                         className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all text-sm h-32 resize-none"
-                                        placeholder="Describe the purpose of this permission set and who it should be assigned to."
+                                        placeholder="Describe the purpose of this permission set."
                                     />
                                 </div>
                             </div>
 
                             <div className="space-y-4">
                                 <h3 className="font-bold text-slate-800 border-b border-slate-200 pb-2">Applicable Roles <span className="text-slate-400 font-normal ml-1">(Optional)</span></h3>
-                                <p className="text-sm text-slate-500 mb-3">Select roles to limit who this permission set can be assigned to. Leave empty to make it available to all users (Generic).</p>
+                                <p className="text-sm text-slate-500 mb-3">Informational only: Indicate which roles this set is intended for.</p>
 
                                 <div className="grid grid-cols-2 gap-3">
                                     {MOCK_ROLES.map(role => {
@@ -382,12 +322,6 @@ const PermissionSetsTab = () => {
                                         );
                                     })}
                                 </div>
-                                {formData.applicableRoles.length === 0 && (
-                                    <div className="flex items-center gap-2 mt-2 text-slate-500 bg-slate-50 p-3 rounded-lg border border-slate-100">
-                                        <Info size={16} className="text-blue-500" />
-                                        <span className="text-sm font-medium">No roles selected. This permission set will be <span className="font-bold text-slate-700">Generic</span> and available to any user.</span>
-                                    </div>
-                                )}
                             </div>
                         </div>
                     </div>
@@ -419,41 +353,100 @@ const PermissionSetsTab = () => {
                 </div>
             )}
 
-            {/* --- CAPABILITIES MATRIX MODE --- */}
+            {/* --- CAPABILITIES MATRIX MODE (PURE MVP) --- */}
             {mode === 'capabilities' && selectedSet && (
                 <div className="absolute inset-0 z-20 bg-white animate-in zoom-in-95 duration-200 flex flex-col">
-                    {/* Baseline Context Selector Overlay */}
-
-                    <div className="bg-slate-50 border-b border-slate-200 px-6 py-2 flex items-center justify-end gap-3 text-sm">
-                        <span className="text-slate-500 font-medium">View baseline impact for:</span>
-                        <select
-                            className="bg-white border border-slate-300 text-slate-700 text-sm rounded-md px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                            value={baselineRoleId}
-                            onChange={(e) => setBaselineRoleId(e.target.value)}
-                        >
-                            <option value="">-- No Context (Pure) --</option>
-                            {MOCK_ROLES
-                                .filter(r => selectedSet.applicableRoles.length === 0 ? false : selectedSet.applicableRoles.includes(r.id))
-                                .map(r => (
-                                    <option key={r.id} value={r.id}>{r.name}</option>
-                                ))
-                            }
-                        </select>
-                        <div className="flex items-center gap-1.5 ml-2 text-xs text-slate-400 bg-white px-2 py-1 rounded border border-slate-200">
-                            <Info size={12} />
-                            <span>Simulated View</span>
-                        </div>
-                    </div>
-
+                    {/* No Baseline Context Bar - Removed for MVP */}
                     <div className="flex-1 relative">
                         <RoleCapabilities
                             entity={selectedSet}
                             entityType="permission_set"
                             parentRole={null}
-                            baselineRole={MOCK_ROLES.find(r => r.id === baselineRoleId)}
+                            baselineRole={null} // Explicitly null for pure mode
                             onSave={handleSaveCapabilities}
                             onBack={() => setMode('list')}
                         />
+                    </div>
+                </div>
+            )}
+
+            {/* --- ASSIGNMENT MODAL --- */}
+            {showAssignmentModal && selectedSet && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => setShowAssignmentModal(false)} />
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg relative z-10 flex flex-col max-h-[80vh] animate-in zoom-in-95 duration-200">
+                        <div className="p-5 border-b border-slate-100 flex justify-between items-center">
+                            <div>
+                                <h3 className="font-bold text-slate-800 text-lg">Assign Users</h3>
+                                <p className="text-xs text-slate-500">Assign "{selectedSet.name}" to users.</p>
+                            </div>
+                            <button onClick={() => setShowAssignmentModal(false)} className="text-slate-400 hover:text-slate-700">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="p-2 border-b border-slate-100 bg-slate-50">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                                <input
+                                    type="text"
+                                    placeholder="Search users..."
+                                    className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-300"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-2">
+                            <div className="space-y-1">
+                                {MOCK_USERS_SHORT.map(user => {
+                                    const isAssigned = tempAssignments.includes(user.id);
+                                    return (
+                                        <div
+                                            key={user.id}
+                                            onClick={() => toggleAssignment(user.id)}
+                                            className={`
+                                                flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors
+                                                ${isAssigned ? 'bg-blue-50 border border-blue-100' : 'hover:bg-slate-50 border border-transparent'}
+                                            `}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className={`
+                                                    w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border
+                                                    ${isAssigned ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-slate-100 text-slate-500 border-slate-200'}
+                                                `}>
+                                                    {user.name.charAt(0)}
+                                                </div>
+                                                <div>
+                                                    <div className={`font-medium text-sm ${isAssigned ? 'text-blue-900' : 'text-slate-700'}`}>{user.name}</div>
+                                                    <div className="text-xs text-slate-500">{user.role}</div>
+                                                </div>
+                                            </div>
+                                            <div className={`
+                                                w-5 h-5 rounded border flex items-center justify-center transition-colors
+                                                ${isAssigned ? 'bg-blue-600 border-blue-600' : 'bg-white border-slate-300'}
+                                            `}>
+                                                {isAssigned && <Check size={12} className="text-white" />}
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+
+                        <div className="p-5 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 rounded-b-xl">
+                            <button
+                                onClick={() => setShowAssignmentModal(false)}
+                                className="px-4 py-2 bg-white border border-slate-200 text-slate-600 font-bold rounded-lg hover:bg-slate-100 transition-colors text-sm"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={saveAssignments}
+                                className="px-4 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-sm text-sm"
+                            >
+                                Update Assignments ({tempAssignments.length})
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
