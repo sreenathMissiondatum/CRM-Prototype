@@ -11,10 +11,17 @@ import CreateLead from './components/Leads/CreateLead';
 import AccountDetail from './components/Accounts/AccountDetail';
 import ContactDetail from './components/Contacts/ContactDetail';
 import LoanProgramsList from './components/LoanPrograms/LoanProgramsList';
+import LoanProgramsListMVP from './components/Loans/LoanPrograms/LoanProgramMVP/LoanProgramsListMVP';
 import AccountsList from './components/Accounts/AccountsList';
 import Account360 from './components/Accounts/Account360';
 import AdminPanel from './components/Admin/AdminPanel';
 import UserProfile from './components/User/UserProfile';
+import MarketingDashboard from './components/Marketing/MarketingDashboard';
+import TemplatesList from './components/Marketing/Templates/TemplatesList';
+import TemplateUpload from './components/Marketing/Templates/TemplateUpload';
+import TemplateEditor from './components/Marketing/Templates/TemplateEditor';
+import RecipientPreview from './components/Marketing/Templates/RecipientPreview';
+import CampaignWizard from './components/Marketing/Campaigns/CampaignWizard';
 import { Plus, LayoutGrid, BarChart3 } from 'lucide-react';
 
 function App() {
@@ -169,10 +176,10 @@ function App() {
   ];
 
   const [leads, setLeads] = useState([
-    { id: 'LD-001', name: 'Sarah Jenkins', businessName: 'Jenkins Catering', source: 'Referral', stage: 'New', assignedOfficer: 'Sarah M', status: 'online', lastActive: 'Now', email: 'sarah@jenkinscatering.com', phone: '(555) 123-4567', createdDate: 'Nov 24, 2023', urgencyStatus: 'track', value: '$50,000', company: 'Jenkins Catering', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150&h=150' },
+    { id: 'LD-001', name: 'Sarah Jenkins', businessName: 'Jenkins Catering', source: 'Referral', stage: 'New', assignedOfficer: 'Sarah Miller', status: 'online', lastActive: 'Now', email: 'sarah@jenkinscatering.com', phone: '(555) 123-4567', createdDate: 'Nov 24, 2023', urgencyStatus: 'track', value: '$50,000', company: 'Jenkins Catering', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150&h=150' },
     { id: 'LD-002', name: 'Mike Ross', businessName: 'Ross Legal', source: 'Web Form', stage: 'Attempting Contact', assignedOfficer: 'Alex Morgan', status: 'busy', lastActive: '10m ago', email: 'mike@rosslegal.com', phone: '(555) 987-6543', createdDate: 'Nov 20, 2023', urgencyStatus: 'medium', value: '$120,000', company: 'Ross Legal', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150&h=150' },
     { id: 'LD-003', name: 'David Miller', businessName: 'Miller Construction', source: 'Cold Outreach', stage: 'Qualified', assignedOfficer: 'Unassigned', lastActivity: 'Nov 29', email: 'dave@millerconst.com', phone: '(555) 456-7890', createdDate: 'Nov 15, 2023', urgencyStatus: 'high', value: '$350,000', company: 'Miller Construction', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=150&h=150' },
-    { id: 'LD-004', name: 'Elena Fisher', businessName: 'Fisher Design', source: 'Existing Client', stage: 'New', assignedOfficer: 'Sarah M', status: 'dnd', lastActive: '1h ago', email: 'elena@fisherdesign.com', phone: '(555) 222-3333', createdDate: 'Dec 05, 2023', urgencyStatus: 'track', value: '$80,000', company: 'Fisher Design', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=150&h=150' }
+    { id: 'LD-004', name: 'Elena Fisher', businessName: 'Fisher Design', source: 'Existing Client', stage: 'New', assignedOfficer: 'Sarah Miller', status: 'dnd', lastActive: '1h ago', email: 'elena@fisherdesign.com', phone: '(555) 222-3333', createdDate: 'Dec 05, 2023', urgencyStatus: 'track', value: '$80,000', company: 'Fisher Design', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=150&h=150' }
   ]);
 
   const selectedLoan = loans.find(l => l.id === selectedLoanId) || loans[0];
@@ -209,6 +216,10 @@ function App() {
     }));
   };
 
+  const handleUpdateLead = (leadId, updates) => {
+    setLeads(prev => prev.map(l => l.id === leadId ? { ...l, ...updates } : l));
+  };
+
   const [isSidebarPinned, setIsSidebarPinned] = useState(false);
   const isAdminMode = activeTab === 'admin';
 
@@ -225,6 +236,10 @@ function App() {
           {activeTab === 'loan-programs' ? (
             <div className="h-full overflow-y-auto">
               <LoanProgramsList />
+            </div>
+          ) : activeTab === 'loan-programs-mvp' ? (
+            <div className="h-full overflow-y-auto">
+              <LoanProgramsListMVP />
             </div>
           ) : activeTab === 'account-detail' ? (
             <AccountDetail
@@ -250,6 +265,22 @@ function App() {
             <div className="h-full overflow-y-auto">
               <CreateLead onNavigate={setActiveTab} />
             </div>
+          ) : activeTab.startsWith('marketing') ? (
+            <div className="h-full overflow-y-auto">
+              {activeTab === 'marketing-templates' ? (
+                <TemplatesList onNavigate={setActiveTab} />
+              ) : activeTab === 'marketing-template-editor' ? (
+                <TemplateEditor onNavigate={setActiveTab} />
+              ) : activeTab === 'marketing-template-upload' ? (
+                <TemplateUpload onNavigate={setActiveTab} />
+              ) : activeTab === 'marketing-campaign-preview' ? (
+                <RecipientPreview onNavigate={setActiveTab} />
+              ) : activeTab === 'marketing-campaign-wizard' ? (
+                <CampaignWizard onNavigate={setActiveTab} />
+              ) : (
+                <MarketingDashboard onNavigate={setActiveTab} />
+              )}
+            </div>
           ) : activeTab.startsWith('loans') ? (
             <LoansLayout
               viewMode={activeTab}
@@ -272,6 +303,7 @@ function App() {
               onUpdateFilters={setLeadFilters}
               onImportLeads={handleImportLeads}
               onBulkUpdate={handleBulkUpdateLeads}
+              onUpdateLead={handleUpdateLead}
             />
           ) : (
             <div className="h-full overflow-y-auto">

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Check, Search, ChevronDown, ChevronUp, User, Calendar, Plus } from 'lucide-react';
+import { MOCK_USERS } from '../../data/mockUsers';
 
 /**
  * LeadFilterDrawer
@@ -49,7 +50,7 @@ const LeadFilterDrawer = ({ isOpen, onClose, filters, onApplyFilters }) => {
 
     // 1. Ownership (User Picker)
     const OwnershipSection = () => {
-        const users = ['Me', 'Unassigned', 'Alex Morgan', 'Sarah Connor', 'John Doe', 'Any User'];
+        const users = ['Me', ...MOCK_USERS.filter(u => u.name !== 'System' && u.name !== 'Unassigned').map(u => u.name), 'Any User'];
         const [search, setSearch] = useState('');
 
         return (
@@ -70,8 +71,8 @@ const LeadFilterDrawer = ({ isOpen, onClose, filters, onApplyFilters }) => {
                             key={user}
                             onClick={() => setDraft({ ...draft, ownership: user })}
                             className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all ${draft.ownership === user
-                                    ? 'bg-blue-50 text-blue-700 font-medium ring-1 ring-blue-200'
-                                    : 'text-slate-600 hover:bg-slate-50'
+                                ? 'bg-blue-50 text-blue-700 font-medium ring-1 ring-blue-200'
+                                : 'text-slate-600 hover:bg-slate-50'
                                 }`}
                         >
                             <div className="flex items-center gap-2">
@@ -110,8 +111,8 @@ const LeadFilterDrawer = ({ isOpen, onClose, filters, onApplyFilters }) => {
                             key={stage}
                             onClick={() => toggleStage(stage)}
                             className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 border text-center ${isSelected
-                                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm transform scale-[1.02]'
-                                    : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02]'
+                                ? 'bg-blue-600 text-white border-blue-600 shadow-sm transform scale-[1.02]'
+                                : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300 hover:shadow-sm hover:scale-[1.02]'
                                 }`}
                         >
                             {stage}
@@ -197,8 +198,8 @@ const LeadFilterDrawer = ({ isOpen, onClose, filters, onApplyFilters }) => {
                             key={p}
                             onClick={() => setDraft({ ...draft, activity: p })}
                             className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${draft.activity === p
-                                    ? 'bg-blue-50 border-blue-200 text-blue-700'
-                                    : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                                ? 'bg-blue-50 border-blue-200 text-blue-700'
+                                : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
                                 }`}
                         >
                             {p}

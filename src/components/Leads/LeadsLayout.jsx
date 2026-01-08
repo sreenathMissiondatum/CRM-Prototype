@@ -14,7 +14,8 @@ const LeadsLayout = ({
     currentFilters,
     onUpdateFilters,
     onImportLeads,
-    onBulkUpdate
+    onBulkUpdate,
+    onUpdateLead
 }) => {
     // Current user context (mock)
     const currentUser = { name: 'Alex Morgan' };
@@ -46,7 +47,13 @@ const LeadsLayout = ({
             ) : (
                 // Detail View (Detail + Context Sidebar)
                 <div className="flex-1 flex flex-col min-w-0 bg-white animate-in slide-in-from-right-4 duration-300">
-                    <LeadDetail lead={selectedLead} onBack={() => onSelectLead(null)} onViewAccount={onViewAccount} onViewContact={onViewContact} />
+                    <LeadDetail
+                        lead={selectedLead}
+                        onBack={() => onSelectLead(null)}
+                        onViewAccount={onViewAccount}
+                        onViewContact={onViewContact}
+                        onUpdateLead={onUpdateLead}
+                    />
                 </div>
             )}
         </div>

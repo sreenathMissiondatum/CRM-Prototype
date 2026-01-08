@@ -6,65 +6,14 @@ import {
     BadgeCheck, ExternalLink, Calendar
 } from 'lucide-react';
 
+import { CANONICAL_CONTACTS } from '../../data/canonicalContacts';
+
 const AccountContactsTab = ({ onAddContact, onViewContact }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [filterRole, setFilterRole] = useState('All');
 
-    // Mock Data
-    const contacts = [
-        {
-            id: 'CT-101',
-            firstName: 'Sarah',
-            lastName: 'Jenkins',
-            title: 'Owner & CEO',
-            email: 'sarah@jenkinscatering.com',
-            phone: '(313) 555-0199',
-            roles: ['Authorized Signer', 'Guarantor', 'Primary Contact'],
-            preferredMethod: 'Email',
-            isActive: true,
-            linkedLoans: 3,
-            lastActive: '2024-03-10'
-        },
-        {
-            id: 'CT-102',
-            firstName: 'Michael',
-            lastName: 'Ross',
-            title: 'CFO',
-            email: 'mike.ross@jenkinscatering.com',
-            phone: '(313) 555-0200',
-            roles: ['Authorized Signer', 'Billing Contact'],
-            preferredMethod: 'Phone',
-            isActive: true,
-            linkedLoans: 2,
-            lastActive: '2024-03-05'
-        },
-        {
-            id: 'CT-103',
-            firstName: 'Jessica',
-            lastName: 'Pearson',
-            title: 'Legal Counsel',
-            email: 'jpearnson@pearsonhardman.com',
-            phone: '(212) 555-9000',
-            roles: ['Legal Rep'],
-            preferredMethod: 'Email',
-            isActive: true,
-            linkedLoans: 0,
-            lastActive: '2023-11-20'
-        },
-        {
-            id: 'CT-104',
-            firstName: 'David',
-            lastName: 'Miller',
-            title: 'Operations Manager',
-            email: 'dave@jenkinscatering.com',
-            phone: '(313) 555-0155',
-            roles: ['Site Contact'],
-            preferredMethod: 'Phone',
-            isActive: false,
-            linkedLoans: 0,
-            lastActive: '2023-01-15'
-        }
-    ];
+    // Use Canonical Data
+    const contacts = CANONICAL_CONTACTS;
 
     // Stats Calculations
     const stats = useMemo(() => {

@@ -106,6 +106,11 @@ const Sidebar = ({ active, onNavigate, isPinned, onTogglePin, className, userRol
                             id: 'loan-programs',
                             label: 'Loan Programs',
                             roles: ['ADMIN', 'ORG_ADMIN', 'OPS', 'CREDIT', 'PRODUCT'] // Role Guard
+                        },
+                        {
+                            id: 'loan-programs-mvp',
+                            label: 'Loan Programs (MVP)',
+                            roles: ['ADMIN', 'ORG_ADMIN', 'OPS', 'CREDIT', 'PRODUCT'] // Role Guard
                         }
                     ]
                 },
@@ -122,7 +127,7 @@ const Sidebar = ({ active, onNavigate, isPinned, onTogglePin, className, userRol
             title: 'Communications',
             items: [
                 { id: 'chat', icon: MessageSquare, label: 'Chat Inbox' },
-                { id: 'email', icon: Mail, label: 'Email' },
+                { id: 'marketing-dashboard', icon: Mail, label: 'Email Marketing' },
                 { id: 'documents', icon: FileText, label: 'Documents' },
             ]
         },

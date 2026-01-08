@@ -8,6 +8,7 @@ import LoanProgramImport from './LoanProgramImport';
 import LoanProgramWizard from './LoanProgramWizard';
 import LoanProgramDetail from './LoanProgramDetail';
 
+
 const LoanProgramsList = () => {
     const [isImportOpen, setIsImportOpen] = useState(false);
     const [isWizardOpen, setIsWizardOpen] = useState(false);
@@ -84,12 +85,17 @@ const LoanProgramsList = () => {
         }
     };
 
+
+
     if (selectedProgram) {
         return <LoanProgramDetail program={selectedProgram} onBack={() => setSelectedProgram(null)} />;
     }
 
     return (
-        <div className="flex-1 bg-slate-50 overflow-hidden flex flex-col h-full animate-in fade-in duration-300">
+        <div
+            className="flex-1 bg-slate-50 overflow-hidden flex flex-col h-full animate-in fade-in duration-300"
+            onClick={() => setActiveMenuId(null)} // Close menus on click outside
+        >
             {/* Header */}
             <div className="bg-white border-b border-slate-200 px-8 py-6">
                 <div className="flex justify-between items-start mb-6">
@@ -163,8 +169,8 @@ const LoanProgramsList = () => {
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {programs.map((prog) => (
-                                <tr key={prog.id} onClick={() => setSelectedProgram(prog)} className="group hover:bg-slate-50/50 transition-colors cursor-pointer">
-                                    <td className="px-6 py-4">
+                                <tr key={prog.id} className="group hover:bg-slate-50/50 transition-colors cursor-pointer">
+                                    <td className="px-6 py-4" onClick={() => setSelectedProgram(prog)}>
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
                                                 <FileText size={20} />
@@ -175,7 +181,7 @@ const LoanProgramsList = () => {
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4">
+                                    <td className="px-6 py-4" onClick={() => setSelectedProgram(prog)}>
                                         {prog.source === 'LMS' ? (
                                             <span className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-1 rounded">
                                                 <CloudDownload size={10} /> LMS
@@ -186,19 +192,19 @@ const LoanProgramsList = () => {
                                             </span>
                                         )}
                                     </td>
-                                    <td className="px-6 py-4">
+                                    <td className="px-6 py-4" onClick={() => setSelectedProgram(prog)}>
                                         <span className="text-sm font-mono text-slate-600 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">v{prog.version}</span>
                                     </td>
-                                    <td className="px-6 py-4">
+                                    <td className="px-6 py-4" onClick={() => setSelectedProgram(prog)}>
                                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${getStatusColor(prog.status)}`}>
                                             <div className={`w-1.5 h-1.5 rounded-full ${prog.status === 'Active' ? 'bg-emerald-500' : prog.status === 'Draft' ? 'bg-amber-500' : 'bg-slate-400'}`}></div>
                                             {prog.status}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-4">
+                                    <td className="px-6 py-4" onClick={() => setSelectedProgram(prog)}>
                                         <span className="text-sm font-medium text-slate-700">{prog.activeLoans}</span>
                                     </td>
-                                    <td className="px-6 py-4">
+                                    <td className="px-6 py-4" onClick={() => setSelectedProgram(prog)}>
                                         <div className="text-sm text-slate-600">{prog.lastModified}</div>
                                         <div className="text-xs text-slate-400">{prog.owner}</div>
                                     </td>
