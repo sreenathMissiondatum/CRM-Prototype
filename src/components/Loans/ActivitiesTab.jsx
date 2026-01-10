@@ -1,147 +1,105 @@
 import React, { useState, useMemo } from 'react';
 import {
-    Search, Filter, CheckCircle2, AlertCircle, MessageSquare,
-    FileText, User, Settings, Mail, ShieldAlert, CheckSquare,
-    ArrowUpRight, Calendar, ChevronDown, ChevronRight,
+    Search, Filter, MessageSquare, FileText, User, Settings, Mail,
+    ShieldAlert, ArrowUpRight, Calendar, ChevronDown, ChevronRight,
     Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, Voicemail,
-    Users, Clock, Video
+    Users, Clock, Video, CheckCircle2
 } from 'lucide-react';
+import { format, isToday, isYesterday, isThisWeek } from 'date-fns';
 
-const ActivitiesTab = ({ loan, activities }) => {
-    // --------------------------------------------------------------------------
-    // MOCK DATA: Timeline Activities - REMOVED (Received via props)
-    // --------------------------------------------------------------------------
-
-    const [filterType, setFilterType] = useState('all');
+const ActivitiesTab = ({ activities }) => {
+    const [filterType, setFilterType] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
-
-    // Default expanded state: Today & This Week
-    const [expandedGroups, setExpandedGroups] = useState({
-        'Today': true,
-        'This Week': true
-    });
+    const [expandedGroups, setExpandedGroups] = useState({ 'Today': true, 'Yesterday': true, 'This Week': true });
 
     const toggleGroup = (groupKey) => {
-        setExpandedGroups(prev => ({
-            ...prev,
-            [groupKey]: !prev[groupKey]
-        }));
+        setExpandedGroups(prev => ({ ...prev, [groupKey]: !prev[groupKey] }));
     };
 
     // --------------------------------------------------------------------------
-    // FILTERING & GROUPING LOGIC
+    // FILTERING & SEARCH LOGIC
     // --------------------------------------------------------------------------
-    const groupedActivities = useMemo(() => {
-        const groups = {
-            'Today': [],
-            'This Week': [],
-            // Older groups added dynamically
-        };
-
-        const now = new Date();
-        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const startOfWeek = new Date(startOfToday);
-        startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay()); // Sunday as start
-
-        activities.forEach(act => {
-            // 1. Apply Filters First
-            if (filterType !== 'all') {
-                if (act.category !== filterType) return;
+    const filteredActivities = useMemo(() => {
+        return activities.filter(act => {
+            // 1. Filter by Type
+            if (filterType !== 'All') {
+                if (filterType === 'Actions' && act.activityType !== 'ACTION') return false;
+                if (filterType === 'Calls' && act.activityType !== 'CALL') return false;
+                if (filterType === 'Meetings' && act.activityType !== 'MEETING') return false;
+                if (filterType === 'Msgs' && act.activityType !== 'MESSAGE') return false;
+                if (filterType === 'System' && act.activityType !== 'SYSTEM') return false;
+                if (filterType === 'Decisions' && act.activityType !== 'DECISION') return false;
             }
 
+            // 2. Search
             if (searchQuery) {
                 const query = searchQuery.toLowerCase();
-                const matchesTitle = act.title.toLowerCase().includes(query);
-                const matchesDesc = act.description?.toLowerCase().includes(query);
-                const matchesUser = act.user.toLowerCase().includes(query);
-                if (!matchesTitle && !matchesDesc && !matchesUser) return;
+                const matchTitle = act.title.toLowerCase().includes(query);
+                const matchDesc = act.description?.toLowerCase().includes(query);
+                const matchUser = act.performedBy?.toLowerCase().includes(query);
+                if (!matchTitle && !matchDesc && !matchUser) return false;
             }
 
-            // 2. Determine Group
-            const actDate = new Date(act.timestamp);
-            let groupKey = '';
-
-            if (actDate >= startOfToday) {
-                groupKey = 'Today';
-            } else if (actDate >= startOfWeek) {
-                groupKey = 'This Week';
-            } else {
-                // Month - Year
-                const monthNames = ["January", "February", "March", "April", "May", "June",
-                    "July", "August", "September", "October", "November", "December"
-                ];
-                groupKey = `${monthNames[actDate.getMonth()]} ${actDate.getFullYear()}`;
-            }
-
-            if (!groups[groupKey]) groups[groupKey] = [];
-            groups[groupKey].push(act);
+            return true;
         });
-
-        // 3. Cleanup Empty Groups & Sort Keys
-        const sortedGroups = [];
-        if (groups['Today'].length > 0) sortedGroups.push({ key: 'Today', items: groups['Today'] });
-        if (groups['This Week'].length > 0) sortedGroups.push({ key: 'This Week', items: groups['This Week'] });
-
-        const monthKeys = Object.keys(groups).filter(k => k !== 'Today' && k !== 'This Week');
-        monthKeys.sort((a, b) => new Date(b) - new Date(a));
-
-        monthKeys.forEach(key => {
-            if (groups[key].length > 0) sortedGroups.push({ key: key, items: groups[key] });
-        });
-
-        return sortedGroups;
     }, [activities, filterType, searchQuery]);
+
+    // --------------------------------------------------------------------------
+    // GROUPING LOGIC (By Time)
+    // --------------------------------------------------------------------------
+    const groupedActivities = useMemo(() => {
+        const groups = { 'Today': [], 'Yesterday': [], 'This Week': [], 'Earlier': [] };
+
+        filteredActivities.forEach(act => {
+            const date = new Date(act.timestamp);
+            if (isToday(date)) groups['Today'].push(act);
+            else if (isYesterday(date)) groups['Yesterday'].push(act);
+            else if (isThisWeek(date)) groups['This Week'].push(act);
+            else groups['Earlier'].push(act);
+        });
+
+        // Remove empty groups
+        return Object.entries(groups).filter(([_, items]) => items.length > 0);
+    }, [filteredActivities]);
 
     // --------------------------------------------------------------------------
     // UI HELPERS
     // --------------------------------------------------------------------------
-    const getActivityIcon = (act) => {
-        switch (act.category) {
-            case 'decision': return <ShieldAlert className="text-purple-600" size={18} />;
-            case 'action': return <User className="text-blue-500" size={18} />;
-            case 'communication': return <Mail className="text-amber-500" size={18} />;
-            case 'system': return <Settings className="text-slate-400" size={18} />;
-            case 'call':
-                if (act.metadata?.outcome === 'missed') return <PhoneMissed className="text-red-400" size={18} />;
-                if (act.metadata?.outcome === 'voicemail') return <Voicemail className="text-amber-500" size={18} />;
-                if (act.metadata?.direction === 'inbound') return <PhoneIncoming className="text-green-500" size={18} />;
-                return <PhoneOutgoing className="text-blue-500" size={18} />;
-            case 'meeting':
-                return <Video className="text-indigo-500" size={18} />;
+    const getActivityIcon = (type) => {
+        switch (type) {
+            case 'DECISION': return <ShieldAlert className="text-purple-600" size={18} />;
+            case 'ACTION': return <FileText className="text-blue-500" size={18} />;
+            case 'MESSAGE': return <Mail className="text-amber-500" size={18} />;
+            case 'SYSTEM': return <Settings className="text-slate-400" size={18} />;
+            case 'CALL': return <Phone className="text-emerald-600" size={18} />;
+            case 'MEETING': return <Users className="text-indigo-500" size={18} />;
             default: return <FileText className="text-slate-400" size={18} />;
         }
     };
 
-    const getTypeLabel = (type) => {
-        switch (type) {
-            case 'decision': return 'Decision';
-            case 'action': return 'Action';
-            case 'communication': return 'Message';
-            case 'system': return 'System';
-            case 'call': return 'Call';
-            case 'meeting': return 'Meeting';
-            default: return 'Event';
-        }
+    const formatTime = (isoString) => {
+        if (!isoString) return '';
+        return format(new Date(isoString), 'h:mm a');
     };
+
+    const filters = [
+        { id: 'All', label: 'All' },
+        { id: 'Actions', label: 'Actions' },
+        { id: 'Calls', label: 'Calls' },
+        { id: 'Meetings', label: 'Meetings' },
+        { id: 'Msgs', label: 'Msgs' },
+        { id: 'System', label: 'System' },
+        { id: 'Decisions', label: 'Decisions', highlight: true },
+    ];
 
     return (
         <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-2 duration-300">
-
             {/* CONTROLS HEADER */}
             <div className="bg-white border text-center border-slate-200 rounded-xl p-4 mb-6 shadow-sm">
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-
                     {/* Filter Pills */}
                     <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0 scrollbar-hide">
-                        {[
-                            { id: 'all', label: 'All' },
-                            { id: 'action', label: 'Actions' },
-                            { id: 'call', label: 'Calls' },
-                            { id: 'meeting', label: 'Meetings' },
-                            { id: 'communication', label: 'Msgs' },
-                            { id: 'system', label: 'System' },
-                            { id: 'decision', label: 'Decisions', highlight: true },
-                        ].map(f => (
+                        {filters.map(f => (
                             <button
                                 key={f.id}
                                 onClick={() => setFilterType(f.id)}
@@ -162,7 +120,7 @@ const ActivitiesTab = ({ loan, activities }) => {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                         <input
                             type="text"
-                            placeholder="Search timeline..."
+                            placeholder="Search activities..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
@@ -173,25 +131,23 @@ const ActivitiesTab = ({ loan, activities }) => {
 
             {/* TIMELINE */}
             <div className="relative pl-4 sm:pl-0 space-y-2 pb-12">
-
-                {groupedActivities.map((group) => {
-                    const isOpen = expandedGroups[group.key] ?? false;
+                {groupedActivities.map(([groupKey, items]) => {
+                    const isOpen = expandedGroups[groupKey] ?? true;
 
                     return (
-                        <div key={group.key} className="relative">
-
+                        <div key={groupKey} className="relative">
                             {/* Group Header */}
                             <div
-                                onClick={() => toggleGroup(group.key)}
+                                onClick={() => toggleGroup(groupKey)}
                                 className="sticky top-0 z-20 flex items-center gap-3 py-2 bg-slate-50/95 backdrop-blur-sm border-y border-slate-200/50 cursor-pointer hover:bg-slate-100 transition-colors group/header mb-4"
                             >
                                 <button className="p-1 text-slate-400 group-hover:header:text-slate-600 transition-transform duration-200">
                                     {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                                 </button>
                                 <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex-1 flex items-center gap-2">
-                                    {group.key}
+                                    {groupKey}
                                     <span className="bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full text-[10px] min-w-[1.5rem] text-center">
-                                        {group.items.length}
+                                        {items.length}
                                     </span>
                                 </h3>
                             </div>
@@ -199,112 +155,84 @@ const ActivitiesTab = ({ loan, activities }) => {
                             {/* Group Items */}
                             {isOpen && (
                                 <div className="space-y-6 pl-4 sm:pl-8 relative animate-in slide-in-from-top-2 duration-200">
-                                    {/* Timeline Line for Group */}
+                                    {/* Timeline Line */}
                                     <div className="absolute left-4 sm:left-8 top-0 bottom-0 w-px bg-slate-200 transform -translate-x-1/2"></div>
 
-                                    {group.items.map((activity) => (
-                                        <div key={activity.id} className="relative group">
-
-                                            {/* Dot / Icon */}
+                                    {items.map((act) => (
+                                        <div key={act.activityId} className="relative group">
+                                            {/* Icon */}
                                             <div className={`
-                                                absolute left-0 sm:left-0 top-0 -translate-x-1/2 w-8 h-8 rounded-full border-4 border-slate-50 flex items-center justify-center z-10 transition-transform group-hover:scale-110
-                                                ${activity.type === 'decision' ? 'bg-purple-100 ring-2 ring-purple-100' : 'bg-white ring-1 ring-slate-200'}
+                                                absolute left-0 top-0 -translate-x-1/2 w-8 h-8 rounded-full border-4 border-slate-50 flex items-center justify-center z-10 transition-transform group-hover:scale-110
+                                                ${act.activityType === 'DECISION' ? 'bg-purple-100 ring-2 ring-purple-100' : 'bg-white ring-1 ring-slate-200'}
                                             `}>
-                                                {getActivityIcon(activity)}
+                                                {getActivityIcon(act.activityType)}
                                             </div>
 
-                                            {/* Card Content */}
+                                            {/* Card */}
                                             <div className={`
                                                 ml-6 sm:ml-8 p-4 rounded-xl border transition-all duration-200 relative
-                                                ${activity.type === 'decision'
+                                                ${act.activityType === 'DECISION'
                                                     ? 'bg-purple-50/50 border-purple-200 hover:shadow-md'
                                                     : 'bg-white border-slate-200 hover:border-blue-200 hover:shadow-sm'}
+                                                ${act.activityType === 'SYSTEM' ? 'opacity-80' : 'opacity-100'}
                                             `}>
                                                 {/* Header */}
                                                 <div className="flex justify-between items-start mb-1">
                                                     <div className="flex flex-wrap items-center gap-2">
                                                         <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border
-                                                            ${activity.type === 'decision' ? 'bg-purple-100 text-purple-700 border-purple-200' : 'bg-slate-100 text-slate-500 border-slate-200'}
+                                                            ${act.activityType === 'DECISION' ? 'bg-purple-100 text-purple-700 border-purple-200' : 'bg-slate-100 text-slate-500 border-slate-200'}
                                                         `}>
-                                                            {getTypeLabel(activity.type)}
+                                                            {act.activityType}
                                                         </span>
                                                         <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
                                                             <Calendar size={12} />
-                                                            {activity.displayTime}
+                                                            {formatTime(act.timestamp)}
                                                         </span>
                                                     </div>
                                                 </div>
 
-                                                {/* Title & Description */}
-                                                <h3 className={`text-sm font-semibold mb-1 ${activity.type === 'decision' ? 'text-purple-900' : 'text-slate-800'}`}>
-                                                    {activity.title}
+                                                {/* Title */}
+                                                <h3 className={`text-sm font-semibold mb-1 ${act.activityType === 'DECISION' ? 'text-purple-900' : 'text-slate-800'}`}>
+                                                    {act.title}
                                                 </h3>
 
-                                                {activity.description && (
+                                                {/* Description */}
+                                                {act.description && (
                                                     <p className="text-sm text-slate-600 mb-3 bg-white/50 p-2 rounded border border-slate-200/50 italic">
-                                                        {activity.description}
+                                                        {act.description}
                                                     </p>
                                                 )}
 
-                                                {/* Call/Meeting Specific Metadata */}
-                                                {(activity.type === 'call' || activity.type === 'meeting') && activity.metadata && (
+                                                {/* Metadata (Calls/Meetings) */}
+                                                {act.metadata && (
                                                     <div className="mb-3 flex flex-wrap gap-2">
-                                                        {/* Outcome / Status Badge */}
-                                                        {activity.metadata.outcome && (
-                                                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border uppercase tracking-wider
-                                                                ${activity.metadata.outcome === 'connected' ? 'bg-green-50 text-green-700 border-green-200' :
-                                                                    activity.metadata.outcome === 'missed' ? 'bg-red-50 text-red-700 border-red-200' :
-                                                                        'bg-amber-50 text-amber-700 border-amber-200'}
-                                                            `}>
-                                                                {activity.metadata.outcome}
+                                                        {Object.entries(act.metadata).map(([key, value]) => (
+                                                            <span key={key} className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-slate-100 text-slate-600 border border-slate-200 uppercase tracking-wider">
+                                                                {key}: {Array.isArray(value) ? value.length : value}
                                                             </span>
-                                                        )}
-                                                        {activity.metadata.status && (
-                                                            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-slate-100 text-slate-600 border border-slate-200 uppercase tracking-wider">
-                                                                {activity.metadata.status}
-                                                            </span>
-                                                        )}
-
-                                                        {/* Duration */}
-                                                        {activity.metadata.duration && (
-                                                            <span className="text-xs text-slate-500 flex items-center gap-1">
-                                                                <Clock size={12} />
-                                                                {activity.metadata.duration}
-                                                            </span>
-                                                        )}
-
-                                                        {/* Participants */}
-                                                        {activity.metadata.participants && (
-                                                            <span className="text-xs text-slate-500 flex items-center gap-1" title={activity.metadata.participants.join(', ')}>
-                                                                <Users size={12} />
-                                                                {activity.metadata.participants.length} Participants
-                                                            </span>
-                                                        )}
+                                                        ))}
                                                     </div>
                                                 )}
 
-                                                {/* Meta & Actions */}
+                                                {/* Footer: User & Related */}
                                                 <div className="flex flex-wrap items-center justify-between gap-4 mt-3 pt-3 border-t border-slate-100/50">
                                                     <div className="flex items-center gap-2 text-xs">
                                                         <div className="font-bold text-slate-700 flex items-center gap-1.5">
-                                                            {activity.user === 'System' ? <Settings size={12} /> : <User size={12} />}
-                                                            {activity.user}
+                                                            {act.performedBy === 'System' ? <Settings size={12} /> : <User size={12} />}
+                                                            {act.performedBy}
                                                         </div>
-                                                        {activity.role && (
-                                                            <>
-                                                                <span className="text-slate-300">•</span>
-                                                                <span className="text-slate-500">{activity.role}</span>
-                                                            </>
+                                                        {act.role && (
+                                                            <span className="text-slate-400">• {act.role}</span>
                                                         )}
                                                     </div>
 
-                                                    {activity.related && (
+                                                    {act.relatedEntity && (
                                                         <div className="flex items-center gap-2">
                                                             <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Related:</span>
-                                                            <a href="#" className="flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline">
-                                                                {activity.related.label}
+                                                            <span className="flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-700 cursor-pointer">
+                                                                {act.relatedEntity.label}
                                                                 <ArrowUpRight size={12} />
-                                                            </a>
+                                                            </span>
                                                         </div>
                                                     )}
                                                 </div>
@@ -317,16 +245,17 @@ const ActivitiesTab = ({ loan, activities }) => {
                     );
                 })}
 
+                {/* Empty State */}
                 {groupedActivities.length === 0 && (
-                    <div className="text-center py-12 ml-8">
-                        <div className="bg-slate-50 inline-flex p-4 rounded-full mb-3 text-slate-300">
+                    <div className="text-center py-12 ml-8 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                        <div className="bg-white inline-flex p-4 rounded-full mb-3 text-slate-300 shadow-sm border border-slate-100">
                             <Filter size={24} />
                         </div>
-                        <h3 className="text-slate-900 font-medium">No activities found</h3>
-                        <p className="text-slate-500 text-sm">Try adjusting your filters or search query.</p>
+                        <h3 className="text-slate-900 font-medium">No activities found for this filter.</h3>
+                        <p className="text-slate-500 text-sm mb-4">Try adjusting your filters or search query.</p>
                         <button
-                            onClick={() => { setFilterType('all'); setSearchQuery(''); }}
-                            className="mt-4 text-blue-600 font-bold text-sm hover:underline"
+                            onClick={() => { setFilterType('All'); setSearchQuery(''); }}
+                            className="text-blue-600 font-bold text-sm hover:underline"
                         >
                             Clear Filters
                         </button>
@@ -338,3 +267,4 @@ const ActivitiesTab = ({ loan, activities }) => {
 };
 
 export default ActivitiesTab;
+

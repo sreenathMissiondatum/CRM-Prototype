@@ -20,7 +20,10 @@ import ProgramDetailsDrawer from '../LoanPrograms/ProgramDetailsDrawer';
 import LeadEligibilityTile from './LeadEligibilityTile';
 import EligibilityExplanationPanel from './EligibilityExplanationPanel';
 
-const LeadSummaryView = ({ lead, assignedPrograms = [], onUpdateAssignedPrograms, onViewAccount, onViewContact, onLogActivity }) => {
+const LeadSummaryView = ({ lead, assignedPrograms = [], onUpdateAssignedPrograms, onViewAccount, onViewContact, onLogActivity, onConvert, readOnly }) => {
+    // ... (skip down to render)
+
+
     // Enhanced Mock Data (merged with prop)
     const data = {
         ...lead,
@@ -156,7 +159,7 @@ const LeadSummaryView = ({ lead, assignedPrograms = [], onUpdateAssignedPrograms
                     outcome: 'success'
                 });
             }
-            alert("Conversion Logic Triggered!"); // Placeholder
+            onConvert && onConvert();
         } else {
             setIsReadinessDrawerOpen(true);
         }
@@ -529,10 +532,20 @@ const LeadSummaryView = ({ lead, assignedPrograms = [], onUpdateAssignedPrograms
                             <FileText size={16} /> Request Docs
                         </button>
                         <div className="h-px bg-slate-100 my-2"></div>
-                        <ProgressiveButton
-                            progress={readiness.score}
-                            onClick={handleConvertClick}
-                        />
+                        {data.stage === 'Converted' ? (
+                            <button
+                                disabled
+                                className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg font-bold cursor-not-allowed shadow-sm"
+                            >
+                                <CircleCheck size={18} className="fill-emerald-100" />
+                                Converted to Loan
+                            </button>
+                        ) : (
+                            <ProgressiveButton
+                                progress={readiness.score}
+                                onClick={handleConvertClick}
+                            />
+                        )}
                     </div>
 
                     {/* 6. Recent Activity & Insight */}

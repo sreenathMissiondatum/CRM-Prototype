@@ -8,7 +8,8 @@ const LoansLayout = ({
     onViewAccount = () => { },
     onViewContact = () => { },
     selectedLoan,
-    onSelectLoan
+    onSelectLoan,
+    user
 }) => {
     // State is now lifted to App.jsx for persistence
 
@@ -20,6 +21,7 @@ const LoansLayout = ({
                     onBack={() => onSelectLoan(null)}
                     onViewAccount={onViewAccount}
                     onViewContact={onViewContact}
+                    user={user}
                 />
             ) : (
                 <LoansList

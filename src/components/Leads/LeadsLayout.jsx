@@ -15,7 +15,8 @@ const LeadsLayout = ({
     onUpdateFilters,
     onImportLeads,
     onBulkUpdate,
-    onUpdateLead
+    onUpdateLead,
+    onConvertLead
 }) => {
     // Current user context (mock)
     const currentUser = { name: 'Alex Morgan' };
@@ -53,6 +54,7 @@ const LeadsLayout = ({
                         onViewAccount={onViewAccount}
                         onViewContact={onViewContact}
                         onUpdateLead={onUpdateLead}
+                        onConvertLead={onConvertLead}
                     />
                 </div>
             )}

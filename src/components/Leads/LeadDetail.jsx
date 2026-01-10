@@ -13,11 +13,13 @@ import LeadDetailsTab from './LeadDetailsTab';
 import DocumentReviewTask from '../Tasks/DocumentReviewTask';
 import TaskDrawer from '../Tasks/TaskDrawer';
 import LoanProgramSelector from '../LoanPrograms/LoanProgramSelector';
+import LeadStateChevron from './LeadStateChevron';
+import LeadStateControl from './LeadStateControl';
 import { MOCK_USERS, getAssignedUser } from '../../data/mockUsers';
 
 
 
-const LeadDetail = ({ lead, onBack, onViewAccount, onViewContact, onUpdateLead }) => {
+const LeadDetail = ({ lead, onBack, onViewAccount, onViewContact, onUpdateLead, onConvertLead }) => {
     const [activeTab, setActiveTab] = useState('summary');
     const [selectedTask, setSelectedTask] = useState(null); // Review Task (Full Screen)
     const [selectedDocument, setSelectedDocument] = useState(null);
@@ -44,6 +46,45 @@ const LeadDetail = ({ lead, onBack, onViewAccount, onViewContact, onUpdateLead }
     useEffect(() => {
         setAssignedPrograms(lead.assignedPrograms || []);
     }, [lead.id, lead.assignedPrograms]);
+
+    // --- LEAD STATE LOGIC ---
+    const [currentLeadStage, setCurrentLeadStage] = useState(lead.stage || 'New');
+    // Ensure local state updates if prop changes (e.g. from parent refresh)
+    useEffect(() => {
+        setCurrentLeadStage(lead.stage || 'New');
+    }, [lead.stage]);
+
+    const isReadOnly = currentLeadStage === 'Converted';
+
+    const handleStageTransition = (newStage) => {
+        // 1. Log Audit
+        const auditLog = {
+            eventId: `evt_${Date.now()}`,
+            leadId: lead.id,
+            previousStage: currentLeadStage,
+            newStage: newStage,
+            changedBy: 'Current User', // In real app, get from context
+            timestamp: new Date().toISOString()
+        };
+        console.log('[AUDIT] LEAD STATUS CHANGE:', auditLog);
+
+        // 2. Update Local State (Optimistic)
+        setCurrentLeadStage(newStage);
+
+        // 3. Propagate to Parent (Mock)
+        if (onUpdateLead) {
+            onUpdateLead(lead.id, { stage: newStage });
+        }
+
+        // 4. Log Activity
+        handleLogActivity({
+            type: 'system',
+            title: `Status Changed to ${newStage}`,
+            outcome: 'Success',
+            summary: `Lead moved from ${currentLeadStage} to ${newStage}`,
+            notes: lead?.notes ? `Notes: ${lead.notes} | Reason: ${lead.reason}` : undefined
+        });
+    };
 
     // Lifted Document State
     const [documents, setDocuments] = useState([
@@ -493,26 +534,25 @@ const LeadDetail = ({ lead, onBack, onViewAccount, onViewContact, onUpdateLead }
                         <div>
                             <div className="flex items-center gap-4 mb-1">
                                 <div className="flex items-center gap-3">
+
+                                    {/* Avatar */}
                                     {lead.avatar && (
                                         <div className="w-12 h-12 rounded-full border border-slate-200 overflow-hidden shrink-0">
                                             <img src={lead.avatar} alt={lead.name} className="w-full h-full object-cover" />
                                         </div>
                                     )}
+
                                     <div>
-                                        <div className="flex items-center gap-2">
+                                        {/* Name & Badge Row */}
+                                        <div className="flex items-center gap-3">
                                             <h2 className="text-xl font-bold text-slate-800">{lead.name}</h2>
-                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${lead.stage === 'New' ? 'bg-sky-100 text-sky-700' :
-                                                lead.stage === 'Attempting Contact' ? 'bg-indigo-100 text-indigo-700' :
-                                                    lead.stage === 'Pre-Screening' ? 'bg-amber-100 text-amber-700' :
-                                                        lead.stage === 'Hold' ? 'bg-orange-100 text-orange-700' :
-                                                            lead.stage === 'Nurturing' ? 'bg-blue-100 text-blue-700' :
-                                                                lead.stage === 'Qualified' ? 'bg-emerald-100 text-emerald-700' :
-                                                                    lead.stage === 'Adverse Action' ? 'bg-red-100 text-red-700' :
-                                                                        lead.stage === 'Converted' ? 'bg-purple-100 text-purple-700' :
-                                                                            'bg-slate-100 text-slate-600'
-                                                }`}>
-                                                {lead.stage}
-                                            </span>
+
+                                            {/* Replaced Static Badge with Dynamic Control if Authorized */}
+                                            <LeadStateControl
+                                                currentStage={currentLeadStage}
+                                                onStageChange={handleStageTransition}
+                                                userRole="Loan Officer" // Mock Role, strictly 'Loan Officer' to see it
+                                            />
                                         </div>
                                         <div className="text-sm text-slate-500 font-medium">{lead.businessName}</div>
                                     </div>
@@ -642,8 +682,13 @@ const LeadDetail = ({ lead, onBack, onViewAccount, onViewContact, onUpdateLead }
                         </div>
                     </div>
 
+                    {/* Lead State Chevron */}
+                    <div className="mt-6 mb-4">
+                        <LeadStateChevron currentStage={currentLeadStage} />
+                    </div>
+
                     {/* Tabs */}
-                    <div className="flex gap-6 mt-6 border-b border-slate-100">
+                    <div className="flex gap-6 mt-2 border-b border-slate-100">
                         {tabs.map(tab => (
                             <button
                                 key={tab.id}
@@ -672,11 +717,16 @@ const LeadDetail = ({ lead, onBack, onViewAccount, onViewContact, onUpdateLead }
                             onViewAccount={onViewAccount}
                             onViewContact={onViewContact}
                             onLogActivity={handleLogActivity}
+                            onConvert={() => onConvertLead(lead.id)}
+                            readOnly={isReadOnly}
                         />
                     )}
 
                     {activeTab === 'details' && (
-                        <LeadDetailsTab lead={lead} />
+                        <LeadDetailsTab
+                            lead={lead}
+                            readOnly={isReadOnly}
+                        />
                     )}
 
                     {activeTab === 'activities' && (

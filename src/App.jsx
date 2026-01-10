@@ -90,6 +90,18 @@ function App() {
     setCurrentUser(prev => ({ ...prev, ...updatedFields }));
   };
 
+  const handleSwitchUser = (demoUser) => {
+    console.log(`[AUDIT] Switched user context to: ${demoUser.firstName} ${demoUser.lastName} (${demoUser.role})`);
+    setCurrentUser(prev => ({
+      ...prev,
+      ...demoUser,
+      // In a real app we'd fetch the full profile, for demo we mix in the demoUser props
+      profilePhotoUrl: demoUser.profilePhotoUrl || null
+    }));
+  };
+
+
+
   const [leadFilters, setLeadFilters] = useState({
     ownership: 'Any User',
     stages: [],
@@ -101,7 +113,9 @@ function App() {
     risk: 'All'
   });
 
-  const loans = [
+
+
+  const [loans, setLoans] = useState([
     {
       id: 'LN-2023-005',
       applicantName: 'Jenkins Catering Services, LLC',
@@ -173,10 +187,46 @@ function App() {
       steps: [{ id: 1, text: 'Analysis of Q3 sales', due: 'Friday', urgency: 'medium', completed: false }, { id: 2, text: 'Manager approval needed', due: 'Today', urgency: 'high', completed: false }],
       notifications: [{ id: 1, text: "Clarification requested on inventory", time: "30m ago", type: 'warning' }]
     },
-  ];
+  ]);
+
+  const handleConvertLeadToLoan = (leadId) => {
+    const lead = leads.find(l => l.id === leadId);
+    if (!lead) return;
+
+    // 1. Update Lead Stage
+    handleUpdateLead(leadId, { stage: 'Converted' });
+
+    // 2. Create New Loan
+    const newLoanId = `LN-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+    const newLoan = {
+      id: newLoanId,
+      applicantName: lead.businessName || lead.name,
+      industry: 'General', // Would come from lead details
+      purpose: 'Working Capital', // Default or from lead
+      amount: lead.value || '$0',
+      status: 'Pending',
+      progress: 10,
+      stageName: 'Application',
+      currentStep: 1,
+      totalSteps: 5,
+      insights: { hasWarning: false, blockers: [], lastActivity: 'Converted from Lead (Just now)', quickActions: ['Initial Review'] },
+      steps: [{ id: 1, text: 'Initial Application Review', due: 'Pending', urgency: 'medium', completed: false }],
+      notifications: []
+    };
+
+    setLoans(prev => [newLoan, ...prev]);
+
+    // 3. Navigate to Loan
+    setSelectedLoanDetail(newLoan);
+    setSelectedLoanId(newLoan.id);
+    setActiveTab('loans-overview'); // Switch to main loans view? Or 'loans-pipeline'?
+
+    // Optional: Show toast here if we had one
+    console.log(`[CONVERSION] Lead ${leadId} converted to Loan ${newLoanId}`);
+  };
 
   const [leads, setLeads] = useState([
-    { id: 'LD-001', name: 'Sarah Jenkins', businessName: 'Jenkins Catering', source: 'Referral', stage: 'New', assignedOfficer: 'Sarah Miller', status: 'online', lastActive: 'Now', email: 'sarah@jenkinscatering.com', phone: '(555) 123-4567', createdDate: 'Nov 24, 2023', urgencyStatus: 'track', value: '$50,000', company: 'Jenkins Catering', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150&h=150' },
+    { id: 'LD-001', name: 'Sarah Jenkins', businessName: 'Jenkins Catering', source: 'Referral', stage: 'New', assignedOfficer: 'Alex Morgan', status: 'online', lastActive: 'Now', email: 'sarah@jenkinscatering.com', phone: '(555) 123-4567', createdDate: 'Nov 24, 2023', urgencyStatus: 'track', value: '$50,000', company: 'Jenkins Catering', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150&h=150' },
     { id: 'LD-002', name: 'Mike Ross', businessName: 'Ross Legal', source: 'Web Form', stage: 'Attempting Contact', assignedOfficer: 'Alex Morgan', status: 'busy', lastActive: '10m ago', email: 'mike@rosslegal.com', phone: '(555) 987-6543', createdDate: 'Nov 20, 2023', urgencyStatus: 'medium', value: '$120,000', company: 'Ross Legal', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150&h=150' },
     { id: 'LD-003', name: 'David Miller', businessName: 'Miller Construction', source: 'Cold Outreach', stage: 'Qualified', assignedOfficer: 'Unassigned', lastActivity: 'Nov 29', email: 'dave@millerconst.com', phone: '(555) 456-7890', createdDate: 'Nov 15, 2023', urgencyStatus: 'high', value: '$350,000', company: 'Miller Construction', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=150&h=150' },
     { id: 'LD-004', name: 'Elena Fisher', businessName: 'Fisher Design', source: 'Existing Client', stage: 'New', assignedOfficer: 'Sarah Miller', status: 'dnd', lastActive: '1h ago', email: 'elena@fisherdesign.com', phone: '(555) 222-3333', createdDate: 'Dec 05, 2023', urgencyStatus: 'track', value: '$80,000', company: 'Fisher Design', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=150&h=150' }
@@ -230,7 +280,7 @@ function App() {
       </div>
 
       <main className={`flex-1 flex flex-col transition-all duration-300 ease-in-out h-screen overflow-hidden ${isAdminMode ? 'ml-0' : (isSidebarPinned ? 'ml-64' : 'ml-20')}`}>
-        <Header onNavigate={setActiveTab} user={currentUser} />
+        <Header onNavigate={setActiveTab} user={currentUser} onSwitchUser={handleSwitchUser} />
 
         <div className="relative flex-1 flex flex-col min-h-0">
           {activeTab === 'loan-programs' ? (
@@ -289,6 +339,7 @@ function App() {
               onViewContact={handleViewContact}
               selectedLoan={selectedLoanDetail}
               onSelectLoan={setSelectedLoanDetail}
+              user={currentUser}
             />
           ) : activeTab.startsWith('leads') ? (
             <LeadsLayout
@@ -304,6 +355,7 @@ function App() {
               onImportLeads={handleImportLeads}
               onBulkUpdate={handleBulkUpdateLeads}
               onUpdateLead={handleUpdateLead}
+              onConvertLead={handleConvertLeadToLoan}
             />
           ) : (
             <div className="h-full overflow-y-auto">

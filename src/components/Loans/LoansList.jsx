@@ -38,7 +38,7 @@ const LoansList = ({ onSelectLoan, viewMode = 'loans' }) => {
         { id: 'actions', label: 'Actions', visible: true, width: '100px', fixed: true }
     ]);
 
-    const stages = ['All', 'New', 'Docs Pending', 'Underwriting', 'Approval', 'Closing', 'Funded', 'Archived'];
+    const stages = ['All', 'New', 'Packaging', 'Underwriting', 'Credit Committee Review', 'Approved', 'Closed / Funded', 'Withdrawn', 'Declined'];
 
     // 2. Data Logic (Mock Data Generation)
     const loans = useMemo(() => {
@@ -49,7 +49,7 @@ const LoansList = ({ onSelectLoan, viewMode = 'loans' }) => {
                 industry: 'Caterers',
                 relationship: 'Active TA Client',
                 program: 'Working Capital',
-                stage: 'Underwriting',
+                stage: 'New',
                 slaStatus: 'track',
                 slaText: 'On Track',
                 amount: 85000,
@@ -63,7 +63,7 @@ const LoansList = ({ onSelectLoan, viewMode = 'loans' }) => {
                 industry: 'Retail Trade',
                 relationship: 'Returning Client',
                 program: 'SBA 7(a)',
-                stage: 'Underwriting',
+                stage: 'Credit Committee Review',
                 slaStatus: 'warning',
                 slaText: '4h remaining',
                 amount: 350000,
@@ -77,7 +77,7 @@ const LoansList = ({ onSelectLoan, viewMode = 'loans' }) => {
                 industry: 'Manufacturing',
                 relationship: 'New Client',
                 program: 'Equipment Finance',
-                stage: 'Docs Pending',
+                stage: 'Packaging',
                 slaStatus: 'track',
                 slaText: '2 days left',
                 amount: 1200000,
@@ -91,98 +91,17 @@ const LoansList = ({ onSelectLoan, viewMode = 'loans' }) => {
                 industry: 'Food Services',
                 relationship: 'Referral',
                 program: 'Working Capital',
-                stage: 'New',
+                stage: 'Underwriting',
                 slaStatus: 'track',
                 slaText: '23h remaining',
                 amount: 85000,
                 amountFormatted: '$85,000',
                 date: '2023-12-07T09:00:00',
                 officer: 'Sarah M'
-            },
-            {
-                id: 'LN-2298',
-                borrower: 'Apex Logistics',
-                industry: 'Transportation',
-                relationship: 'Premium Partner',
-                program: 'CRE Loop',
-                stage: 'Approval',
-                slaStatus: 'breach',
-                slaText: 'Breached 2h ago',
-                amount: 2500000,
-                amountFormatted: '$2.5M',
-                date: '2023-11-28T11:00:00',
-                officer: 'Alex Morgan'
-            },
-            {
-                id: 'LN-2285',
-                borrower: 'NextGen Tech',
-                industry: 'Technology',
-                relationship: 'New Client',
-                program: 'SBA 7(a)',
-                stage: 'Underwriting',
-                slaStatus: 'breach',
-                slaText: 'Breached 1d ago',
-                amount: 500000,
-                amountFormatted: '$500,000',
-                date: '2023-12-01T09:15:00',
-                officer: 'Alex Morgan'
-            },
-            {
-                id: 'LN-2292',
-                borrower: 'CityWorks LLC',
-                industry: 'Construction',
-                relationship: 'Returning Client',
-                program: 'Line of Credit',
-                stage: 'Docs Pending',
-                slaStatus: 'warning',
-                slaText: '1h remaining',
-                amount: 750000,
-                amountFormatted: '$750,000',
-                date: '2023-12-04T16:45:00',
-                officer: 'John L'
-            },
+            }
         ];
 
-        // Generate mock records for fullness
-        const industries = ['Technology', 'Healthcare', 'Construction', 'Retail', 'Transportation', 'Manufacturing', 'Services'];
-        const relationships = ['New Client', 'Returning Client', 'Referral', 'Active TA Client', 'Premium Partner'];
-        const programs = ['SBA 7(a)', 'Working Capital', 'Equipment Finance', 'Line of Credit', 'CRE Loop'];
-        const mockStages = ['New', 'Docs Pending', 'Underwriting', 'Approval', 'Closing'];
-        const officers = ['Alex Morgan', 'Sarah M', 'John L', 'Unassigned'];
-
-        const generatedLoans = Array.from({ length: 50 }).map((_, i) => {
-            const id = `LN-${2400 + i}`;
-            const amount = Math.floor(Math.random() * 2000000) + 50000;
-            const stage = mockStages[Math.floor(Math.random() * mockStages.length)];
-
-            let slaStatus = 'track';
-            let slaText = 'On Track';
-            const rand = Math.random();
-            if (rand > 0.8) {
-                slaStatus = 'breach';
-                slaText = 'Breached 2h ago';
-            } else if (rand > 0.6) {
-                slaStatus = 'warning';
-                slaText = '4h remaining';
-            }
-
-            return {
-                id,
-                borrower: `Mock Company ${i + 1} ${['LLC', 'Inc', 'Corp'][Math.floor(Math.random() * 3)]}`,
-                industry: industries[Math.floor(Math.random() * industries.length)],
-                relationship: relationships[Math.floor(Math.random() * relationships.length)],
-                program: programs[Math.floor(Math.random() * programs.length)],
-                stage,
-                slaStatus,
-                slaText,
-                amount,
-                amountFormatted: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount),
-                date: new Date(Date.now() - Math.floor(Math.random() * 1000000000)).toISOString(),
-                officer: officers[Math.floor(Math.random() * officers.length)]
-            };
-        });
-
-        return [...staticLoans, ...generatedLoans];
+        return staticLoans;
     }, []);
 
     // Helper functions
@@ -231,10 +150,13 @@ const LoansList = ({ onSelectLoan, viewMode = 'loans' }) => {
     const getStageIcon = (stage) => {
         switch (stage) {
             case 'New': return Sparkles;
-            case 'Docs Pending': return FileText;
+            case 'Packaging': return FileText;
             case 'Underwriting': return Search;
-            case 'Approval': return CheckCircle;
-            case 'Closing': return Briefcase;
+            case 'Credit Committee Review': return Shield;
+            case 'Approved': return CheckCircle;
+            case 'Closed / Funded': return Briefcase;
+            case 'Withdrawn': return X;
+            case 'Declined': return AlertCircle;
             default: return FileText;
         }
     };
@@ -620,10 +542,13 @@ const LoansList = ({ onSelectLoan, viewMode = 'loans' }) => {
                                                         return (
                                                             <div key={col.id}>
                                                                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide border ${loan.stage === 'New' ? 'bg-blue-50 text-blue-700 border-blue-100' :
-                                                                    loan.stage === 'Docs Pending' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                                                                    loan.stage === 'Packaging' ? 'bg-amber-50 text-amber-700 border-amber-100' :
                                                                         loan.stage === 'Underwriting' ? 'bg-purple-50 text-purple-700 border-purple-100' :
-                                                                            loan.stage === 'Approval' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                                                                                'bg-slate-50 text-slate-600 border-slate-200'
+                                                                            loan.stage === 'Credit Committee Review' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' :
+                                                                                loan.stage === 'Approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                                                                                    loan.stage === 'Closed / Funded' ? 'bg-teal-50 text-teal-700 border-teal-100' :
+                                                                                        ['Withdrawn', 'Declined'].includes(loan.stage) ? 'bg-slate-100 text-slate-500 border-slate-200' :
+                                                                                            'bg-slate-50 text-slate-600 border-slate-200'
                                                                     }`}>
                                                                     <StageIcon size={12} strokeWidth={2.5} />
                                                                     {loan.stage}
@@ -732,7 +657,7 @@ const LoansList = ({ onSelectLoan, viewMode = 'loans' }) => {
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

@@ -10,7 +10,7 @@ import {
 import NAICSSelector from '../Shared/NAICSSelector';
 import { CANONICAL_CONTACTS } from '../../data/canonicalContacts';
 
-const LeadDetailsTab = ({ lead }) => {
+const LeadDetailsTab = ({ lead, readOnly }) => {
     // --- State: Sections Expansion ---
     const [sections, setSections] = useState({
         system: false,
@@ -145,6 +145,7 @@ const LeadDetailsTab = ({ lead }) => {
     // --- State: Previous Loan IDs (New) ---
     const [newLoanId, setNewLoanId] = useState('');
     const [loanIdError, setLoanIdError] = useState(null);
+    const [deleteConfirm, setDeleteConfirm] = useState(null); // loanId to confirm delete
 
 
 
@@ -188,7 +189,12 @@ const LeadDetailsTab = ({ lead }) => {
             isCommonHb: false,
             otherBusinesses: false,
             otherBusPercentage: '',
-            otherBusDescription: ''
+            otherBusDescription: '',
+            // Household Financials
+            incGros_hhd: '',
+            netWorth_hhd: '',
+            amtExistLoans_hhd: '',
+            dServExistLoans_mo_hhd: ''
         };
 
         const newContact = {
@@ -217,7 +223,7 @@ const LeadDetailsTab = ({ lead }) => {
         setIsDirty(true);
     };
 
-    // 2. Remove Owner Row
+    // 2. Remove Owner Row (Updated for Household Dissolution)
     const removeOwner = (id) => {
         setFormData(prev => {
             const ownerToDelete = prev.ownership.find(o => o.id === id);
@@ -229,7 +235,6 @@ const LeadDetailsTab = ({ lead }) => {
             // Handle Primary Reassignment
             const wasPrimary = prev.contacts.find(c => c.ownerLink === id)?.isPrimary;
             if (wasPrimary && remainingOwners.length > 0) {
-                // Auto-assign to next available owner
                 const nextOwnerId = remainingOwners[0].id;
                 updatedContacts = updatedContacts.map(c =>
                     c.ownerLink === nextOwnerId ? { ...c, isPrimary: true } : c
@@ -237,9 +242,38 @@ const LeadDetailsTab = ({ lead }) => {
                 auditLog("PRIMARY_OWNER_CHANGED");
             }
 
+            // --- Household Dissolution Logic ---
+            let finalOwnership = remainingOwners;
+
+            if (ownerToDelete && ownerToDelete.isCommonHb) {
+                const newTotalOwners = remainingOwners.length;
+                const newCheckedCount = remainingOwners.filter(o => o.isCommonHb).length;
+
+                // Case: 0 Owners (Clear all - handled by empty array)
+                // Case: 1 Owner, 1 Checked (Valid Single-Person) -> No action needed, preserves inputs.
+
+                // Case: Multi-owner Invalid (Total >= 2 BUT Checked < 2)
+                if (newTotalOwners >= 2 && newCheckedCount < 2) {
+                    // Start Dissolution
+                    finalOwnership = remainingOwners.map(o => ({
+                        ...o,
+                        isCommonHb: false
+                    }));
+                    auditLog("COMMON_HOUSEHOLD_DISSOLVED");
+                    setToastMessage("Household dissolved due to insufficient members.");
+                    setTimeout(() => setToastMessage(null), 4000);
+                } else if (newTotalOwners === 1) {
+                    // Revert to Implicit Single Household
+                    // Clear checkbox state for cleanliness, though logic ignores it
+                    finalOwnership = remainingOwners.map(o => ({ ...o, isCommonHb: false }));
+                    // No Toast needed, just seamless transition
+                    auditLog("HOUSEHOLD_REVERTED_TO_IMPLICIT");
+                }
+            }
+
             return {
                 ...prev,
-                ownership: remainingOwners,
+                ownership: finalOwnership,
                 contacts: updatedContacts
             };
         });
@@ -256,10 +290,19 @@ const LeadDetailsTab = ({ lead }) => {
 
                 // Logic: Trigger for Other Businesses
                 if (field === 'otherBusinesses') {
-                    // If unchecked, clear detailed fields
                     if (value === false) {
                         return { ...o, [field]: value, otherBusPercentage: '', otherBusDescription: '' };
                     }
+                }
+
+                // Logic: Common Household Toggle
+                if (field === 'isCommonHb') {
+                    // Checkbox should be functionally ignored if totalOwners == 1 (though UI should hide it)
+                    if (prev.ownership.length === 1) return o;
+
+                    // Logging
+                    if (value === true) auditLog("COMMON_HOUSEHOLD_SELECTED");
+                    else auditLog("COMMON_HOUSEHOLD_DESELECTED");
                 }
 
                 return { ...o, [field]: value };
@@ -477,12 +520,12 @@ const LeadDetailsTab = ({ lead }) => {
                 priorBorrower: isChecked,
                 // RESET STATE ON UNCHECK
                 previousLoans: isChecked ? prev.history.previousLoans : [],
-                performance: isChecked ? prev.history.performance : 'N/A'
             }
         }));
         if (!isChecked) {
             setNewLoanId('');
             setLoanIdError(null);
+            setDeleteConfirm(null);
         }
     };
 
@@ -511,7 +554,7 @@ const LeadDetailsTab = ({ lead }) => {
                 ...prev.history,
                 previousLoans: [
                     ...(prev.history.previousLoans || []),
-                    { id: trimmedId, status: 'Closed', date: '2023-01-01' } // Mock details
+                    { id: trimmedId, status: 'Closed', date: '2023-01-01', loanPerformance: '' } // Mock details
                 ].sort((a, b) => new Date(b.date) - new Date(a.date)) // Sort by most recent
             }
         }));
@@ -520,9 +563,9 @@ const LeadDetailsTab = ({ lead }) => {
 
         // 4. Audit Log (Strict JSON)
         console.log(JSON.stringify({
-            action: "PRIOR_LOAN_ID_ADDED",
+            action: "PRIOR_LOAN_ADDED",
             entity: "Lead",
-            field: "previousLoanIds",
+            // field: "previousLoanIds", // Removed strict field logging in favor of action-based
             loanId: trimmedId,
             leadId: lead?.id || 'LEAD-7782',
             userId: 'USER-CURRENT-ID', // Mock
@@ -530,25 +573,57 @@ const LeadDetailsTab = ({ lead }) => {
         }));
     };
 
-    const removePreviousLoan = (loanId) => {
+    const deleteLoan = (loanId) => {
+        if (deleteConfirm === loanId) {
+            // Confirm Delete
+            setFormData(prev => ({
+                ...prev,
+                history: {
+                    ...prev.history,
+                    previousLoans: prev.history.previousLoans.filter(l => l.id !== loanId)
+                }
+            }));
+
+            // Audit Log (Strict JSON)
+            console.log(JSON.stringify({
+                action: "PRIOR_LOAN_REMOVED",
+                entity: "Lead",
+                loanId: loanId,
+                leadId: lead?.id || 'LEAD-7782',
+                userId: 'USER-CURRENT-ID', // Mock
+                timestamp: new Date().toISOString()
+            }));
+
+            setDeleteConfirm(null);
+        } else {
+            // Request Confirmation
+            setDeleteConfirm(loanId);
+        }
+    };
+
+    const updateLoanPerformance = (loanId, value) => {
         setFormData(prev => ({
             ...prev,
             history: {
                 ...prev.history,
-                previousLoans: prev.history.previousLoans.filter(l => l.id !== loanId)
+                previousLoans: prev.history.previousLoans.map(l =>
+                    l.id === loanId ? { ...l, loanPerformance: value } : l
+                )
             }
         }));
 
         // Audit Log (Strict JSON)
         console.log(JSON.stringify({
-            action: "PRIOR_LOAN_ID_REMOVED",
+            action: "PRIOR_LOAN_PERFORMANCE_SELECTED",
             entity: "Lead",
-            field: "previousLoanIds",
             loanId: loanId,
+            value: value,
             leadId: lead?.id || 'LEAD-7782',
             userId: 'USER-CURRENT-ID', // Mock
             timestamp: new Date().toISOString()
         }));
+
+        setIsDirty(true);
     };
 
     const viewPreviousLoan = (loanId) => {
@@ -557,13 +632,93 @@ const LeadDetailsTab = ({ lead }) => {
         setTimeout(() => setToastMessage(null), 3000);
     };
 
-    // --- Validation ---
-    const totalOwnership = formData.ownership.reduce((sum, owner) => sum + (parseFloat(owner.percent) || 0), 0);
-    const isTotalOwnershipValid = Math.abs(totalOwnership - 100) < 0.01;
+    // --- Validation (Updated for Matrix) ---
+    const totalOwners = formData.ownership.length;
+    const checkedOwners = formData.ownership.filter(o => o.isCommonHb);
+    const checkedCount = checkedOwners.length;
+
+    // Strict Matrix Validation
+    // 1 | * -> Valid (Implicit)
+    // 2+ | 1 -> INVALID
+    // 2+ | 2+ -> Valid
+    const isHouseholdMatrixValid = totalOwners === 1 ? true : !(totalOwners >= 2 && checkedCount === 1);
+
+    // Household Financials Completeness
+    const areHouseholdFinancialsComplete = () => {
+        // Implicit Single Owner
+        if (totalOwners === 1) {
+            const owner = formData.ownership[0];
+            return owner.incGros_hhd && owner.netWorth_hhd && owner.amtExistLoans_hhd && owner.dServExistLoans_mo_hhd;
+        }
+
+        // Multi-Owner: Check only checked owners
+        if (checkedCount === 0) return true;
+
+        return checkedOwners.every(o =>
+            o.incGros_hhd && o.netWorth_hhd && o.amtExistLoans_hhd && o.dServExistLoans_mo_hhd
+        );
+    };
+
+    // --- Dynamic Household Grouping ---
+    const getHouseholdGroups = () => {
+        const groups = [];
+        const hasValidSharedHousehold = totalOwners >= 2 && checkedCount >= 2;
+
+        // 1. Add Shared Group (if valid)
+        if (hasValidSharedHousehold) {
+            groups.push({
+                id: 'shared-household',
+                type: 'Shared',
+                owners: checkedOwners,
+                label: checkedOwners.map(o => o.firstName).join(', ')
+            });
+        }
+
+        // 2. Add Separate Groups
+        formData.ownership.forEach(owner => {
+            // Implicit Single Owner is technically a "Separate" group of 1 for rendering purposes, 
+            // unless we consider it "Shared/Implicit". logic below handles it:
+
+            // If Single Owner, not checked -> Separate Group
+            // If Multi Owner, Checked -> In Shared Group (skip here)
+            // If Multi Owner, Not Checked -> Separate Group
+
+            // Note: If totalOwners == 1, checkedCount is 0, hasValidSharedHousehold is false.
+            // So Single Owner falls through to here. Perfect.
+
+            if (hasValidSharedHousehold && owner.isCommonHb) return;
+
+            groups.push({
+                id: `separate-${owner.id}`,
+                type: 'Separate',
+                owners: [owner],
+                label: `${owner.firstName} ${owner.lastName}`
+            });
+        });
+
+        // Implicit Single Owner Adjustment? 
+        // If totalOwners == 1, we want it to look like a "Household", not necessarily "Separate".
+        // But "Separate" group rendering logic works fine (Calculated for X).
+        // If we want "Calculated based on X", we can tweak the type if totalOwners == 1.
+        if (totalOwners === 1 && groups.length > 0) {
+            groups[0].type = 'Implicit';
+        }
+
+        return groups;
+    };
+
+    const householdGroups = getHouseholdGroups();
+
+    const totalOwnershipPct = formData.ownership.reduce((sum, owner) => sum + (parseFloat(owner.percent) || 0), 0);
+    const isTotalOwnershipValid = Math.abs(totalOwnershipPct - 100) < 0.01;
 
     const isOwnershipValid = () => {
         // Total Check
         if (!isTotalOwnershipValid) return false;
+
+        // Household Checks
+        if (!isHouseholdMatrixValid) return false;
+        if (!areHouseholdFinancialsComplete()) return false;
 
         return formData.ownership.every(owner => {
             // Base Name Check
@@ -580,7 +735,17 @@ const LeadDetailsTab = ({ lead }) => {
         });
     };
 
-    const isValid = isOwnershipValid(); // Add other validations here if needed
+    const isBorrowingHistoryValid = () => {
+        if (!formData.history.priorBorrower) return true;
+
+        // Rule: At least one loan if checked
+        if (formData.history.previousLoans.length === 0) return false;
+
+        // Rule: All loans must have performance selected
+        return formData.history.previousLoans.every(l => l.loanPerformance && l.loanPerformance !== '');
+    };
+
+    const isValid = isOwnershipValid() && isBorrowingHistoryValid(); // Add other validations here if needed
 
     // --- Render ---
     return (
@@ -591,11 +756,11 @@ const LeadDetailsTab = ({ lead }) => {
                 <h2 className="text-xl font-bold text-slate-800">Lead Documentation</h2>
                 <div className="flex gap-3">
                     <button
-                        className={`px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition-all ${isDirty && isValid ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
-                        disabled={!isDirty || !isValid}
-                        title={!isValid ? "Please fix errors in Ownership section" : "Save Changes"}
+                        className={`px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition-all ${isDirty && isValid && !readOnly ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
+                        disabled={!isDirty || !isValid || readOnly}
+                        title={readOnly ? "Lead is converted and read-only" : (!isValid ? "Please fix errors in Ownership section" : "Save Changes")}
                     >
-                        Save Changes
+                        {readOnly ? 'Read Only' : 'Save Changes'}
                     </button>
                 </div>
             </div>
@@ -613,11 +778,11 @@ const LeadDetailsTab = ({ lead }) => {
             {/* S2: Business Identity */}
             <Section title="Business Identity" icon={Building2} isOpen={sections.identity} onToggle={() => toggleSection('identity')}>
                 <div className="grid grid-cols-2 gap-6">
-                    <Field label="Legal Business Name" value={formData.identity.legalName} onChange={v => handleChange('identity', 'legalName', v)} required />
-                    <Field label="DBA Name" value={formData.identity.dba} onChange={v => handleChange('identity', 'dba', v)} />
+                    <Field label="Legal Business Name" value={formData.identity.legalName} onChange={v => handleChange('identity', 'legalName', v)} required disabled={readOnly} />
+                    <Field label="DBA Name" value={formData.identity.dba} onChange={v => handleChange('identity', 'dba', v)} disabled={readOnly} />
 
                     <div className="grid grid-cols-2 gap-4">
-                        <Field label="Entity Type" value={formData.identity.entityType} onChange={v => handleChange('identity', 'entityType', v)} />
+                        <Field label="Entity Type" value={formData.identity.entityType} onChange={v => handleChange('identity', 'entityType', v)} disabled={readOnly} />
 
                         {/* Secure EIN Field (Progressive) */}
                         <div className="space-y-1">
@@ -718,7 +883,7 @@ const LeadDetailsTab = ({ lead }) => {
                             <tbody className="divide-y divide-slate-100">
                                 {formData.ownership.map((owner, idx) => (
                                     <React.Fragment key={owner.id}>
-                                        <tr className="group hover:bg-slate-50">
+                                        <tr className={`group hover:bg-slate-50 transition-colors ${owner.isCommonHb ? 'bg-blue-50/30' : ''}`}>
                                             <td className="px-4 py-2 text-slate-400 text-xs align-top pt-3">{idx + 1}</td>
                                             <td className="px-4 py-2 align-top">
                                                 <input
@@ -747,15 +912,46 @@ const LeadDetailsTab = ({ lead }) => {
                                                 </div>
                                             </td>
                                             <td className="px-4 py-2 align-top">
-                                                <label className="flex items-center gap-2 cursor-pointer py-1">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={owner.isCommonHb}
-                                                        onChange={e => updateOwner(owner.id, 'isCommonHb', e.target.checked)}
-                                                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                                                    />
-                                                    <span className="text-xs text-slate-500">Yes</span>
-                                                </label>
+                                                {/* Common Household Checkbox */}
+
+                                                {/* State 1: Single Owner -> Disabled, Unchecked (Implicit) */}
+                                                {/* State 2+: Multi Owner -> Enabled */}
+
+                                                {totalOwners === 1 ? (
+                                                    <div className="group/tooltip relative">
+                                                        <label className="flex items-center gap-2 cursor-not-allowed py-1 opacity-50">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={false}
+                                                                disabled
+                                                                className="rounded border-slate-300 text-slate-400 bg-slate-100"
+                                                            />
+                                                            <span className="text-xs font-bold text-slate-500">Household</span>
+                                                        </label>
+                                                        <div className="absolute bottom-full left-0 mb-2 hidden group-hover/tooltip:block w-48 bg-slate-800 text-white text-[10px] p-2 rounded shadow-lg z-10 transition-opacity">
+                                                            Household applies when multiple owners share finances.
+                                                            <div className="absolute top-full left-4 -mt-1 border-4 border-transparent border-t-slate-800"></div>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <label className="flex items-center gap-2 cursor-pointer py-1">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={owner.isCommonHb}
+                                                            onChange={e => updateOwner(owner.id, 'isCommonHb', e.target.checked)}
+                                                            className={`rounded border-slate-300 text-blue-600 focus:ring-blue-500 ${!isHouseholdMatrixValid && owner.isCommonHb ? 'ring-2 ring-red-300 ring-offset-1' : ''}`}
+                                                        />
+                                                        <span className={`text-xs ${owner.isCommonHb ? 'font-bold text-blue-700' : 'text-slate-500'}`}>
+                                                            {owner.isCommonHb ? 'Household' : 'No'}
+                                                        </span>
+                                                    </label>
+                                                )}
+
+                                                {!isHouseholdMatrixValid && owner.isCommonHb && (
+                                                    <div className="text-[10px] text-red-600 leading-tight mt-1 animate-in slide-in-from-top-1">
+                                                        <AlertCircle size={10} className="inline mr-0.5" /> Must include ≥2
+                                                    </div>
+                                                )}
                                             </td>
                                             <td className="px-4 py-2 align-top">
                                                 <label className="flex items-center gap-2 cursor-pointer py-1">
@@ -772,6 +968,53 @@ const LeadDetailsTab = ({ lead }) => {
                                                 <button onClick={() => removeOwner(owner.id)} className="text-slate-300 hover:text-red-500 transition-colors pt-1">
                                                     <Trash2 size={14} />
                                                 </button>
+                                            </td>
+                                        </tr>
+                                        {/* Household Financials Expanded Row (Always Visible per UX) */}
+                                        <tr className="bg-slate-50/50">
+                                            <td colSpan="7" className="px-4 pb-4 pt-1">
+                                                <div className="ml-12 pl-4 py-3 border-l-2 border-slate-300 bg-white/50 rounded-r-lg grid grid-cols-4 gap-4 animate-in slide-in-from-top-1 duration-200">
+                                                    <div className="col-span-4 mb-1 flex items-center gap-2">
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Household Financials (Personal)</span>
+                                                        <div className="h-px bg-slate-200 flex-1"></div>
+                                                    </div>
+                                                    <div>
+                                                        <Field
+                                                            label="Annual Income"
+                                                            value={owner.incGros_hhd}
+                                                            onChange={v => updateOwner(owner.id, 'incGros_hhd', v)}
+                                                            placeholder="$0"
+                                                            required
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <Field
+                                                            label="Net Worth"
+                                                            value={owner.netWorth_hhd}
+                                                            onChange={v => updateOwner(owner.id, 'netWorth_hhd', v)}
+                                                            placeholder="$0"
+                                                            required
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <Field
+                                                            label="Existing Loans"
+                                                            value={owner.amtExistLoans_hhd}
+                                                            onChange={v => updateOwner(owner.id, 'amtExistLoans_hhd', v)}
+                                                            placeholder="$0"
+                                                            required
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <Field
+                                                            label="Mo. Debt Service"
+                                                            value={owner.dServExistLoans_mo_hhd}
+                                                            onChange={v => updateOwner(owner.id, 'dServExistLoans_mo_hhd', v)}
+                                                            placeholder="$0"
+                                                            required
+                                                        />
+                                                    </div>
+                                                </div>
                                             </td>
                                         </tr>
                                         {/* Expanded Row for Other Business Details */}
@@ -809,22 +1052,66 @@ const LeadDetailsTab = ({ lead }) => {
                                                     </div>
                                                 </td>
                                             </tr>
-                                        )}
+                                        )
+                                        }
                                     </React.Fragment>
                                 ))}
                             </tbody>
                         </table>
-                        {formData.ownership.length === 0 && (
-                            <div className="p-4 text-center text-sm text-slate-400 italic bg-slate-50/50">
-                                No owners defined. Add an owner to establish structure.
-                            </div>
-                        )}
+                        {
+                            formData.ownership.length === 0 && (
+                                <div className="p-4 text-center text-sm text-slate-400 italic bg-slate-50/50">
+                                    No owners defined. Add an owner to establish structure.
+                                </div>
+                            )
+                        }
 
-                        {/* Total Ownership Indicator */}
+                        {/* Derived Household Totals (Dynamic Groups) */}
+                        <div className="border-t border-slate-200 divide-y divide-slate-200">
+                            {householdGroups.map(group => (
+                                <div key={group.id} className={`px-4 py-3 ${group.type === 'Shared' || group.type === 'Implicit' ? 'bg-slate-50/50' : 'bg-slate-50/30'}`}>
+                                    <div className="flex justify-between items-baseline mb-2">
+                                        <div className="text-[10px] font-bold text-slate-500 uppercase">Household Totals (Calculated)</div>
+                                        <div className="text-[10px] text-slate-400 italic">
+                                            {group.type === 'Shared' || group.type === 'Implicit' ? 'Calculated based on:' : 'Calculated for'} {group.label}
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-4 gap-4 font-mono text-sm">
+                                        <div>
+                                            <span className="text-slate-400 text-xs block">Gross Income</span>
+                                            <span className="font-bold text-slate-700">
+                                                ${group.owners.reduce((sum, o) => sum + (parseInt(o.incGros_hhd) || 0), 0).toLocaleString()}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <span className="text-slate-400 text-xs block">Net Worth</span>
+                                            <span className="font-bold text-slate-700">
+                                                ${group.owners.reduce((sum, o) => sum + (parseInt(o.netWorth_hhd) || 0), 0).toLocaleString()}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <span className="text-slate-400 text-xs block">Total Loans</span>
+                                            <span className="font-bold text-slate-700">
+                                                ${group.owners.reduce((sum, o) => sum + (parseInt(o.amtExistLoans_hhd) || 0), 0).toLocaleString()}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <span className="text-slate-400 text-xs block">Mo. Debt Service</span>
+                                            <span className="font-bold text-slate-700">
+                                                ${group.owners.reduce((sum, o) => sum + (parseInt(o.dServExistLoans_mo_hhd) || 0), 0).toLocaleString()}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+
+
                         <div className={`px-4 py-3 border-t flex items-center justify-between text-sm ${isTotalOwnershipValid ? 'bg-green-50 border-green-100 text-green-800' : 'bg-red-50 border-red-100 text-red-800'}`}>
                             <div className="flex items-center gap-2">
                                 {isTotalOwnershipValid ? <Check size={16} /> : <AlertCircle size={16} />}
-                                <span className="font-bold">Total Ownership: {totalOwnership.toFixed(2)}%</span>
+                                <span className="font-bold">Total Ownership: {totalOwnershipPct.toFixed(2)}%</span>
                                 {!isTotalOwnershipValid && (
                                     <span className="font-normal opacity-80">(Must equal 100%)</span>
                                 )}
@@ -1109,10 +1396,10 @@ const LeadDetailsTab = ({ lead }) => {
                     </div>
                 </div>
 
-            </Section>
+            </Section >
 
             {/* S4: Industry & Location */}
-            <Section title="Industry & Location" icon={MapPin} isOpen={sections.industry} onToggle={() => toggleSection('industry')}>
+            < Section title="Industry & Location" icon={MapPin} isOpen={sections.industry} onToggle={() => toggleSection('industry')}>
                 <div className="grid grid-cols-2 gap-6">
                     <div className="col-span-2 grid grid-cols-12 gap-6">
                         <div className="col-span-5">
@@ -1188,10 +1475,10 @@ const LeadDetailsTab = ({ lead }) => {
                     </div>
 
                 </div>
-            </Section>
+            </Section >
 
             {/* S5: Business Background & Impact */}
-            <Section title="Business Background & Impact" icon={Briefcase} isOpen={sections.background} onToggle={() => toggleSection('background')}>
+            < Section title="Business Background & Impact" icon={Briefcase} isOpen={sections.background} onToggle={() => toggleSection('background')}>
                 <div className="grid grid-cols-2 gap-6">
                     <Field label="Date Established" value={formData.background.establishedDate} type="date" onChange={v => handleChange('background', 'establishedDate', v)} />
                     <Field label="Years in Business" value="3 Years" readOnly /> {/* Derived Mock */}
@@ -1211,10 +1498,10 @@ const LeadDetailsTab = ({ lead }) => {
                         <Field label="Business Description" type="textarea" value={formData.background.description} onChange={v => handleChange('background', 'description', v)} />
                     </div>
                 </div>
-            </Section>
+            </Section >
 
             {/* S6: Loan Intent & Project Funding */}
-            <Section title="Loan Intent & Project Funding" icon={CreditCard} isOpen={sections.intent} onToggle={() => toggleSection('intent')}>
+            < Section title="Loan Intent & Project Funding" icon={CreditCard} isOpen={sections.intent} onToggle={() => toggleSection('intent')}>
                 <div className="grid grid-cols-2 gap-6">
                     <Field label="Requested Loan Amount" value={formData.intent.amount} onChange={v => handleChange('intent', 'amount', v)} />
                     <Field label="Requested Term (Months)" value={formData.intent.term} onChange={v => handleChange('intent', 'term', v)} />
@@ -1251,14 +1538,14 @@ const LeadDetailsTab = ({ lead }) => {
                     <div className="col-span-2 bg-slate-50 p-4 rounded-lg flex justify-between items-center border border-slate-200">
                         <span className="text-sm font-bold text-slate-700">Total Project Cost (Estimated)</span>
                         <span className="text-lg font-mono font-bold text-slate-900">
-                            ${(parseInt(formData.intent.amount || 0) + parseInt(formData.intent.ownerContribution || 0) + parseInt(formData.intent.otherFunding || 0)).toLocaleString()}
+                            ${(parseInt(formData.intent.amount || 0) - parseInt(formData.intent.ownerContribution || 0) - parseInt(formData.intent.otherFunding || 0)).toLocaleString()}
                         </span>
                     </div>
                 </div>
-            </Section>
+            </Section >
 
             {/* S7: Borrowing History (Internal) */}
-            <Section title="Borrowing History" icon={RefreshCw} isOpen={sections.history} onToggle={() => toggleSection('history')}>
+            < Section title="Borrowing History" icon={RefreshCw} isOpen={sections.history} onToggle={() => toggleSection('history')}>
                 <div className="p-4 bg-slate-50 border border-slate-100 rounded-lg mb-4 text-xs text-slate-500">
                     Internal fields only visible to staff.
                 </div>
@@ -1272,101 +1559,116 @@ const LeadDetailsTab = ({ lead }) => {
                         />
                         <span className="text-sm font-medium text-slate-700">Prior Borrower with this CDFI?</span>
                     </div>
-                    {/* Performance field disabled if not prior borrower */}
-                    <Field
-                        label="Previous Loan Performance"
-                        value={formData.history.performance}
-                        onChange={v => handleChange('history', 'performance', v)}
-                        readOnly={!formData.history.priorBorrower}
-                        className={!formData.history.priorBorrower ? "opacity-50 pointer-events-none" : ""}
-                    />
+                    {/* Previous Loan Performance Field Removed - Now Per Loan */}
                 </div>
 
                 {/* Previous Loan IDs Table */}
-                {formData.history.priorBorrower && (
-                    <div className="mt-6 border-t border-slate-100 pt-4 animate-in fade-in slide-in-from-top-1">
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Previous Loan IDs</label>
+                {
+                    formData.history.priorBorrower && (
+                        <div className="mt-6 border-t border-slate-100 pt-4 animate-in fade-in slide-in-from-top-1">
+                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Previous Loan IDs</label>
 
-                        <div className="flex flex-col gap-1 mb-3">
-                            <div className="flex gap-2">
-                                <input
-                                    className={`text-sm border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-100 text-slate-800 flex-1 ${loanIdError ? 'border-red-300 focus:border-red-500 bg-red-50' : 'border-slate-300 focus:border-blue-500'}`}
-                                    placeholder="Enter Loan ID (e.g., LN-2023-001)"
-                                    value={newLoanId}
-                                    onChange={e => {
-                                        setNewLoanId(e.target.value);
-                                        if (loanIdError) setLoanIdError(null); // Clear error on type
-                                    }}
-                                    onKeyDown={e => e.key === 'Enter' && addPreviousLoan()}
-                                />
-                                <button
-                                    onClick={addPreviousLoan}
-                                    disabled={!newLoanId.trim()}
-                                    className="px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition-colors"
-                                >
-                                    Add
-                                </button>
+                            <div className="flex flex-col gap-1 mb-3">
+                                <div className="flex gap-2">
+                                    <input
+                                        className={`text-sm border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-100 text-slate-800 flex-1 ${loanIdError ? 'border-red-300 focus:border-red-500 bg-red-50' : 'border-slate-300 focus:border-blue-500'}`}
+                                        placeholder="Enter Loan ID (e.g., LN-2023-001)"
+                                        value={newLoanId}
+                                        onChange={e => {
+                                            setNewLoanId(e.target.value);
+                                            if (loanIdError) setLoanIdError(null); // Clear error on type
+                                        }}
+                                        onKeyDown={e => e.key === 'Enter' && addPreviousLoan()}
+                                    />
+                                    <button
+                                        onClick={addPreviousLoan}
+                                        disabled={!newLoanId.trim()}
+                                        className="px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        Add
+                                    </button>
+                                </div>
+                                {loanIdError && (
+                                    <div className="text-xs text-red-600 font-medium flex items-center gap-1 animate-in slide-in-from-top-1">
+                                        <AlertCircle size={12} /> {loanIdError}
+                                    </div>
+                                )}
                             </div>
-                            {loanIdError && (
-                                <div className="text-xs text-red-600 font-medium flex items-center gap-1 animate-in slide-in-from-top-1">
-                                    <AlertCircle size={12} /> {loanIdError}
+
+                            {formData.history.previousLoans && formData.history.previousLoans.length > 0 ? (
+                                <div className="border border-slate-200 rounded-lg overflow-hidden">
+                                    <table className="w-full text-sm text-left">
+                                        <thead className="bg-slate-50 border-b border-slate-200 font-medium text-slate-500 text-xs uppercase">
+                                            <tr>
+                                                <th className="px-4 py-2">Loan ID</th>
+                                                <th className="px-4 py-2">Loan Date</th>
+                                                <th className="px-4 py-2">Status</th>
+                                                <th className="px-4 py-2 w-48">Prior Loan Performance <span className="text-red-500">*</span></th>
+                                                <th className="px-4 py-2 text-right">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {formData.history.previousLoans.map(loan => (
+                                                <tr key={loan.id} className="group hover:bg-slate-50 transition-colors">
+                                                    <td className="px-4 py-2 font-mono text-slate-700">{loan.id}</td>
+                                                    <td className="px-4 py-2 text-slate-500">{loan.date}</td>
+                                                    <td className="px-4 py-2">
+                                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold border uppercase ${loan.status === 'Closed' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                                                            {loan.status}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-2">
+                                                        <select
+                                                            value={loan.loanPerformance || ''}
+                                                            onChange={(e) => updateLoanPerformance(loan.id, e.target.value)}
+                                                            className={`w-full text-xs border rounded px-2 py-1.5 outline-none transition-colors ${!loan.loanPerformance ? 'border-red-300 bg-red-50 focus:border-red-500' : 'border-slate-300 focus:border-blue-500 bg-white'}`}
+                                                        >
+                                                            <option value="">-- Select --</option>
+                                                            <option value="Paid as Agreed">Paid as Agreed</option>
+                                                            <option value="Late Payments">Late Payments</option>
+                                                            <option value="Default">Default</option>
+                                                            <option value="Charged Off">Charged Off</option>
+                                                        </select>
+                                                    </td>
+                                                    <td className="px-4 py-2 text-right flex justify-end gap-2">
+                                                        <button
+                                                            onClick={() => viewPreviousLoan(loan.id)}
+                                                            className="text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+                                                            title="View Loan Details"
+                                                        >
+                                                            <Eye size={14} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => deleteLoan(loan.id)}
+                                                            className={`text-xs font-medium px-2 py-1 rounded transition-colors flex items-center gap-1 ${deleteConfirm === loan.id ? 'bg-red-600 text-white hover:bg-red-700' : 'text-slate-400 hover:text-red-600 hover:bg-red-50'}`}
+                                                            title="Remove from history"
+                                                        >
+                                                            {deleteConfirm === loan.id ? (
+                                                                <>
+                                                                    Confirm?
+                                                                </>
+                                                            ) : (
+                                                                <Trash2 size={14} />
+                                                            )}
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ) : (
+                                <div className="text-xs text-slate-400 italic bg-slate-50 p-3 rounded border border-dashed border-slate-200 text-center">
+                                    No previous loans added.
                                 </div>
                             )}
                         </div>
-
-                        {formData.history.previousLoans && formData.history.previousLoans.length > 0 ? (
-                            <div className="border border-slate-200 rounded-lg overflow-hidden">
-                                <table className="w-full text-sm text-left">
-                                    <thead className="bg-slate-50 border-b border-slate-200 font-medium text-slate-500 text-xs uppercase">
-                                        <tr>
-                                            <th className="px-4 py-2">Loan ID</th>
-                                            <th className="px-4 py-2">Loan Date</th>
-                                            <th className="px-4 py-2">Status</th>
-                                            <th className="px-4 py-2 text-right">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100">
-                                        {formData.history.previousLoans.map(loan => (
-                                            <tr key={loan.id} className="group hover:bg-slate-50 transition-colors">
-                                                <td className="px-4 py-2 font-mono text-slate-700">{loan.id}</td>
-                                                <td className="px-4 py-2 text-slate-500">{loan.date}</td>
-                                                <td className="px-4 py-2">
-                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border uppercase ${loan.status === 'Closed' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
-                                                        {loan.status}
-                                                    </span>
-                                                </td>
-                                                <td className="px-4 py-2 text-right flex justify-end gap-2">
-                                                    <button
-                                                        onClick={() => viewPreviousLoan(loan.id)}
-                                                        className="text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
-                                                        title="View Loan Details"
-                                                    >
-                                                        <Eye size={14} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => removePreviousLoan(loan.id)}
-                                                        className="text-xs font-medium text-slate-400 hover:text-red-600 px-1 ml-2 transition-colors"
-                                                        title="Remove from history"
-                                                    >
-                                                        <X size={14} />
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        ) : (
-                            <div className="text-xs text-slate-400 italic bg-slate-50 p-3 rounded border border-dashed border-slate-200 text-center">
-                                No previous loans added.
-                            </div>
-                        )}
-                    </div>
-                )}
-            </Section>
+                    )
+                }
+            </Section >
 
             {/* S8: Credit Signals */}
-            <Section title="Credit Signals (Self-Reported)" icon={BadgeCheck} isOpen={sections.credit} onToggle={() => toggleSection('credit')}>
+            < Section title="Credit Signals (Self-Reported)" icon={BadgeCheck} isOpen={sections.credit} onToggle={() => toggleSection('credit')}>
                 <div className="grid grid-cols-2 gap-6">
                     <div className="col-span-2">
                         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Principal Credit Score Range</label>
@@ -1385,10 +1687,10 @@ const LeadDetailsTab = ({ lead }) => {
                     <Field label="Business Credit Score (if known)" value={formData.credit.businessScoreRange} onChange={v => handleChange('credit', 'businessScoreRange', v)} />
                     <Field label="Reported Date" type="date" value={formData.credit.reportedDate} onChange={v => handleChange('credit', 'reportedDate', v)} />
                 </div>
-            </Section>
+            </Section >
 
             {/* S9: Referral & TA */}
-            <Section title="Referral & Technical Assistance" icon={Share2} isOpen={sections.referral} onToggle={() => toggleSection('referral')}>
+            < Section title="Referral & Technical Assistance" icon={Share2} isOpen={sections.referral} onToggle={() => toggleSection('referral')}>
                 <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-1.5">
                         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide">Referral Source Type</label>
@@ -1407,27 +1709,27 @@ const LeadDetailsTab = ({ lead }) => {
                     <Field label="Referring Contact" value={formData.referral.contact} onChange={v => handleChange('referral', 'contact', v)} />
                     <Field label="Referral Outcome" value={formData.referral.outcome} readOnly />
                 </div>
-            </Section>
+            </Section >
 
             {/* S10: Ownership & Demographics (1071) - Consolidated with Contacts */}
-            <Section title="1071 Compliance (See Contacts)" icon={Users} isOpen={sections.demographics} onToggle={() => toggleSection('contact')}>
+            < Section title="1071 Compliance (See Contacts)" icon={Users} isOpen={sections.demographics} onToggle={() => toggleSection('contact')}>
                 <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg mb-6 text-sm text-slate-600 flex items-start gap-3">
                     <Info size={16} className="mt-0.5 shrink-0" />
                     <p>To ensure strict data alignment, 1071 Demographic data is now managed directly within the <strong>Contacts & Ownership</strong> section above. Please expand that section to view or edit demographic data for each owner.</p>
                 </div>
-            </Section>
+            </Section >
 
             {/* S11: Consent & Compliance */}
-            <Section title="Consent & Compliance" icon={FileCheck} isOpen={sections.compliance} onToggle={() => toggleSection('compliance')}>
+            < Section title="Consent & Compliance" icon={FileCheck} isOpen={sections.compliance} onToggle={() => toggleSection('compliance')}>
                 <div className="grid grid-cols-2 gap-6">
                     <Field label="Consent Timestamp" value="2024-10-15 14:30:22 UTC" readOnly />
                     <Field label="Capture Channel" value="Web Portal" readOnly />
                     <Field label="Captured By" value="System (Self-Service)" readOnly />
                     <Field label="IP Address" value="192.168.1.1" readOnly />
                 </div>
-            </Section>
+            </Section >
 
-        </div>
+        </div >
     );
 };
 
