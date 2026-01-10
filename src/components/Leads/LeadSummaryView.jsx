@@ -5,7 +5,8 @@ import {
     ArrowRight, MessageSquare, StickyNote,
     ArrowLeft, ShieldCheck, AlertCircle,
     TrendingUp, Briefcase, Building2, User,
-    CircleCheck, TriangleAlert, Plus, SquarePen, RefreshCw, X, MoreHorizontal, MousePointerClick
+    CircleCheck, TriangleAlert, Plus, SquarePen, RefreshCw, X, MoreHorizontal, MousePointerClick,
+    Ban, ShieldAlert
 } from 'lucide-react';
 import CallPrimaryWidget from '../Shared/CallPrimaryWidget';
 import LeadBorrowerSnapshot from './LeadBorrowerSnapshot';
@@ -532,13 +533,22 @@ const LeadSummaryView = ({ lead, assignedPrograms = [], onUpdateAssignedPrograms
                             <FileText size={16} /> Request Docs
                         </button>
                         <div className="h-px bg-slate-100 my-2"></div>
-                        {data.stage === 'Converted' ? (
+                        {readOnly ? (
                             <button
                                 disabled
-                                className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg font-bold cursor-not-allowed shadow-sm"
+                                className={`w-full flex items-center justify-center gap-2 py-3 rounded-lg font-bold cursor-not-allowed shadow-sm ${data.stage === 'Converted' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-amber-50 border-amber-200 text-amber-700'}`}
                             >
-                                <CircleCheck size={18} className="fill-emerald-100" />
-                                Converted to Loan
+                                {data.stage === 'Converted' ? (
+                                    <>
+                                        <CircleCheck size={18} className="fill-emerald-100" />
+                                        Converted to Loan
+                                    </>
+                                ) : (
+                                    <>
+                                        <Ban size={18} />
+                                        Lead Closed
+                                    </>
+                                )}
                             </button>
                         ) : (
                             <ProgressiveButton

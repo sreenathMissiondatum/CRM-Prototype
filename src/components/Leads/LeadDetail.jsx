@@ -4,7 +4,7 @@ import {
     EllipsisVertical, FileText, SquareCheck,
     ArrowRight, MessageSquare, StickyNote,
     ArrowLeft, Edit, UserPlus, FileUp,
-    ArrowRightFromLine, Trash2, Briefcase
+    ArrowRightFromLine, Trash2, Briefcase, Ban, ShieldAlert
 } from 'lucide-react';
 import LeadSummaryView from './LeadSummaryView';
 import LeadActivityTab from './LeadActivityTab';
@@ -49,14 +49,26 @@ const LeadDetail = ({ lead, onBack, onViewAccount, onViewContact, onUpdateLead, 
 
     // --- LEAD STATE LOGIC ---
     const [currentLeadStage, setCurrentLeadStage] = useState(lead.stage || 'New');
+    const [outcomeStatus, setOutcomeStatus] = useState(lead.outcomeStatus || null);
+    const [closeLeadModal, setCloseLeadModal] = useState(null); // { outcomeStatus }
+
     // Ensure local state updates if prop changes (e.g. from parent refresh)
     useEffect(() => {
         setCurrentLeadStage(lead.stage || 'New');
-    }, [lead.stage]);
+        setOutcomeStatus(lead.outcomeStatus || null);
+    }, [lead.stage, lead.outcomeStatus]);
 
-    const isReadOnly = currentLeadStage === 'Converted';
+    const isReadOnly = currentLeadStage === 'Converted' || outcomeStatus !== null;
 
     const handleStageTransition = (newStage) => {
+        // Handle Terminal State Selection
+        const terminalOutcomes = ['Unqualified', 'Cold', 'Adverse Action'];
+        if (terminalOutcomes.includes(newStage)) {
+            setCloseLeadModal({ outcomeStatus: newStage });
+            return;
+        }
+
+        // Standard Lifecycle Transition
         // 1. Log Audit
         const auditLog = {
             eventId: `evt_${Date.now()}`,
@@ -81,9 +93,43 @@ const LeadDetail = ({ lead, onBack, onViewAccount, onViewContact, onUpdateLead, 
             type: 'system',
             title: `Status Changed to ${newStage}`,
             outcome: 'Success',
-            summary: `Lead moved from ${currentLeadStage} to ${newStage}`,
-            notes: lead?.notes ? `Notes: ${lead.notes} | Reason: ${lead.reason}` : undefined
+            summary: `Lead moved from ${currentLeadStage} to ${newStage}`
         });
+    };
+
+    const handleConfirmCloseLead = (reason) => {
+        const { outcomeStatus: newOutcome } = closeLeadModal;
+
+        // 1. Log Audit
+        const auditLog = {
+            action: 'LEAD_CLOSED',
+            outcome_status: newOutcome,
+            lifecycle_status_at_close: currentLeadStage,
+            reason: reason,
+            user_id: 'Current User',
+            timestamp: new Date().toISOString()
+        };
+        console.log('[AUDIT] LEAD_CLOSED:', auditLog);
+
+        // 2. Update Local State (Optimistic)
+        setOutcomeStatus(newOutcome);
+
+        // 3. Propagate to Parent (Mock)
+        if (onUpdateLead) {
+            onUpdateLead(lead.id, { outcomeStatus: newOutcome });
+        }
+
+        // 4. Log Activity
+        handleLogActivity({
+            type: 'system',
+            title: `Lead Closed as ${newOutcome}`,
+            outcome: newOutcome,
+            summary: `Lead closed as ${newOutcome}. Reason: ${reason}`,
+            notes: `Reason: ${reason}`
+        });
+
+        // 5. Close Modal
+        setCloseLeadModal(null);
     };
 
     // Lifted Document State
@@ -547,11 +593,19 @@ const LeadDetail = ({ lead, onBack, onViewAccount, onViewContact, onUpdateLead, 
                                         <div className="flex items-center gap-3">
                                             <h2 className="text-xl font-bold text-slate-800">{lead.name}</h2>
 
-                                            {/* Replaced Static Badge with Dynamic Control if Authorized */}
+                                            {/* Terminal Outcome Badge */}
+                                            {outcomeStatus && (
+                                                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-bold border border-amber-200">
+                                                    <Ban size={12} />
+                                                    {outcomeStatus}
+                                                </div>
+                                            )}
+
                                             <LeadStateControl
                                                 currentStage={currentLeadStage}
+                                                outcomeStatus={outcomeStatus}
                                                 onStageChange={handleStageTransition}
-                                                userRole="Loan Officer" // Mock Role, strictly 'Loan Officer' to see it
+                                                userRole="Loan Officer"
                                             />
                                         </div>
                                         <div className="text-sm text-slate-500 font-medium">{lead.businessName}</div>
@@ -705,6 +759,16 @@ const LeadDetail = ({ lead, onBack, onViewAccount, onViewContact, onUpdateLead, 
                             </button>
                         ))}
                     </div>
+
+                    {/* Inline Terminal Banner */}
+                    {outcomeStatus && (
+                        <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-3 text-sm text-amber-800 animate-in fade-in slide-in-from-top-1">
+                            <ShieldAlert size={18} className="text-amber-500 shrink-0" />
+                            <p className="font-medium">
+                                This lead is closed as <span className="font-bold uppercase tracking-tight">{outcomeStatus}</span> and is read-only.
+                            </p>
+                        </div>
+                    )}
                 </div>
 
                 {/* Tab Content */}
@@ -809,6 +873,60 @@ const LeadDetail = ({ lead, onBack, onViewAccount, onViewContact, onUpdateLead, 
                             onComplete={handleTaskComplete}
                         />
                     </ErrorBoundary>
+                </div>
+            )}
+
+            {/* Close Lead Confirmation Modal */}
+            {closeLeadModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setCloseLeadModal(null)} />
+                    <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center gap-3 mb-4 text-amber-600">
+                            <ShieldAlert size={24} />
+                            <h2 className="text-xl font-bold">Close Lead</h2>
+                        </div>
+
+                        <p className="text-slate-600 mb-6 leading-relaxed">
+                            This action will close the lead as <span className="font-bold text-slate-800 uppercase tracking-tight">{closeLeadModal.outcomeStatus}</span>. This will lock the lead record to read-only.
+                        </p>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">
+                                    Reason for Closing <span className="text-red-500">*</span>
+                                </label>
+                                <textarea
+                                    id="closure-reason"
+                                    className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-slate-800 transition-all"
+                                    placeholder="Enter reason for closing this lead..."
+                                    rows={4}
+                                    autoFocus
+                                />
+                            </div>
+
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    onClick={() => setCloseLeadModal(null)}
+                                    className="flex-1 px-4 py-2 rounded-xl text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        const reason = document.getElementById('closure-reason')?.value;
+                                        if (!reason || reason.trim() === '') {
+                                            alert("Please provide a reason for closing the lead.");
+                                            return;
+                                        }
+                                        handleConfirmCloseLead(reason.trim());
+                                    }}
+                                    className="flex-2 px-6 py-2 rounded-xl text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-md transition-colors"
+                                >
+                                    Confirm Closure
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
