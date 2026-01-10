@@ -46,6 +46,7 @@ const UsersTab = () => {
     // View State: 'list' | 'add' | 'edit_user'
     const [currentView, setCurrentView] = useState('list');
     const [editingUser, setEditingUser] = useState(null);
+    const [cloningUser, setCloningUser] = useState(null); // New State for Clone
     const [toastMessage, setToastMessage] = useState(null);
 
     const [activeStatus, setActiveStatus] = useState('All');
@@ -94,10 +95,16 @@ const UsersTab = () => {
         'Invited': users.filter(u => u.status === 'Invited').length
     };
 
-    // Toast Logic
+    // Toast Logic: Auto-dismiss only if NOT an Action Toast (User needs time to read/act)
     useEffect(() => {
-        if (toastMessage) {
+        if (toastMessage && toastMessage.type !== 'ACTION_TOAST') {
             const timer = setTimeout(() => setToastMessage(null), 3000);
+            return () => clearTimeout(timer);
+        }
+        // Action Toasts stay until dismissed or interacted with (or maybe 10s?)
+        // Let's stick to no-auto-dismiss for Actions to be safe/visible
+        if (toastMessage && toastMessage.type === 'ACTION_TOAST') {
+            const timer = setTimeout(() => setToastMessage(null), 10000); // 10s auto dismiss for hygiene
             return () => clearTimeout(timer);
         }
     }, [toastMessage]);
@@ -147,9 +154,27 @@ const UsersTab = () => {
             ...user,
             allowedActions: user.status === 'Pending Activation' || sendInvite ? ['RESEND_ACTIVATION', 'EXPIRE_TOKEN'] : []
         };
+
+        // 1. Persist User (Prepend to list, but filtering/paging might hide it)
         setUsers(prev => [newUser, ...prev]);
-        setToastMessage(`User ${user.name} created successfully. Activation pending.`);
+
+        // 2. Audit Log
+        const actionType = cloningUser ? 'USER_CLONED' : 'USER_CREATED';
+        console.log(`[AUDIT] Action: ${actionType}, Actor: Admin, Target User: ${newUser.email}, Status: ${newUser.status}${cloningUser ? `, SourceUser: ${cloningUser.id}` : ''}`);
+
+        // 3. Set Actionable Toast (Context Preserved: No setPage/setFilter calls here)
+        setToastMessage({
+            type: 'ACTION_TOAST',
+            title: cloningUser ? 'User cloned successfully' : 'User created successfully',
+            message: cloningUser
+                ? 'The new user is in Pending Activation and may not appear in the current view.'
+                : 'This user is currently in Pending Activation and is not visible in the current view.',
+            data: newUser
+        });
+
+        // 4. Return to List View (Context Untouched)
         setCurrentView('list');
+        setCloningUser(null);
     };
 
     const handleUpdateUser = (updatedUser) => {
@@ -339,8 +364,9 @@ const UsersTab = () => {
         return (
             <AddUser
                 onSave={handleSaveNewUser}
-                onCancel={() => setCurrentView('list')}
+                onCancel={() => { setCurrentView('list'); setCloningUser(null); }}
                 existingUsers={users}
+                initialData={cloningUser}
             />
         );
     }
@@ -372,11 +398,64 @@ const UsersTab = () => {
     return (
         <div className="flex flex-col relative px-6 pb-6">
             {/* Toast Notification */}
+            {/* Toast Notification */}
             {toastMessage && createPortal(
-                <div className="fixed bottom-6 right-6 z-[100] bg-slate-900/90 text-white px-4 py-3 rounded-lg shadow-xl animate-in slide-in-from-bottom-5 fade-in duration-300 flex items-center gap-3">
-                    <CheckCircle size={20} className="text-emerald-400" />
-                    <span className="font-medium text-sm">{typeof toastMessage === 'string' ? toastMessage : toastMessage.message}</span>
-                    <button onClick={() => setToastMessage(null)} className="ml-2 text-slate-400 hover:text-white"><X size={16} /></button>
+                <div className={`fixed bottom-6 right-6 z-[100] px-4 py-3 rounded-lg shadow-xl animate-in slide-in-from-bottom-5 fade-in duration-300 flex items-start gap-3 max-w-md border ${toastMessage.type === 'ACTION_TOAST' ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-900/90 border-transparent text-white'}`}>
+
+                    {/* Icon */}
+                    <div className={`mt-0.5 ${toastMessage.type === 'ACTION_TOAST' ? 'text-green-600' : 'text-emerald-400'}`}>
+                        <CheckCircle size={20} />
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1">
+                        <div className="font-bold text-sm mb-1">
+                            {typeof toastMessage === 'string' ? 'Notification' : toastMessage.title || 'Notification'}
+                        </div>
+                        <div className={`text-sm mb-3 ${toastMessage.type === 'ACTION_TOAST' ? 'text-slate-600' : 'text-slate-200'}`}>
+                            {typeof toastMessage === 'string' ? toastMessage : toastMessage.message}
+                        </div>
+
+                        {/* Action Buttons (Strictly for ACTION_TOAST) */}
+                        {toastMessage.type === 'ACTION_TOAST' && (
+                            <div className="flex flex-wrap gap-2">
+                                <button
+                                    onClick={() => {
+                                        // 1. Primary CTA: View Pending Activation
+                                        setActiveStatus('Pending Activation'); // Force Filter
+                                        setSearchQuery(''); // Clear Search
+                                        setActiveFilters({ roles: [], departments: [] }); // Clear Advanced
+                                        setCurrentPage(1); // Go to Page 1
+                                        setToastMessage(null);
+
+                                        console.log(`[AUDIT] Action: FILTER_CHANGED_VIA_TOAST, Actor: Admin, NewStatus: Pending Activation`);
+                                    }}
+                                    className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded hover:bg-blue-700 transition-colors shadow-sm"
+                                >
+                                    View Pending Activation Users
+                                </button>
+
+                                <button
+                                    onClick={() => {
+                                        // 2. Secondary CTA: View Profile
+                                        setEditingUser(toastMessage.data);
+                                        setCurrentView('view_user');
+                                        setToastMessage(null);
+
+                                        console.log(`[AUDIT] Action: PROFILE_VIEWED_VIA_TOAST, Actor: Admin, Target User: ${toastMessage.data.id}`);
+                                    }}
+                                    className="px-3 py-1.5 bg-white border border-slate-300 text-slate-700 text-xs font-bold rounded hover:bg-slate-50 transition-colors"
+                                >
+                                    View User Profile
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Close Button */}
+                    <button onClick={() => setToastMessage(null)} className={`ml-2 hover:opacity-75 transition-opacity ${toastMessage.type === 'ACTION_TOAST' ? 'text-slate-400' : 'text-slate-400'}`}>
+                        <X size={16} />
+                    </button>
                 </div>,
                 document.body
             )}
@@ -692,7 +771,14 @@ const UsersTab = () => {
                                     <div
                                         key={user.id}
                                         className={`group hover:bg-blue-50/30 transition-all cursor-pointer relative ${isSelected ? 'bg-blue-50/40' : ''}`}
-                                        onClick={() => {/* Navigate */ }}
+                                        onClick={() => {/* Navigate/Select logic if needed, but row click usually does nothing or selects */ }}
+                                        onDoubleClick={() => {
+                                            // Feature: Row Double-Click -> View User
+                                            // Check permission mock
+                                            console.log(`[AUDIT] Action: USER_VIEWED, Source: User List (Row Double-Click), Target User: ${user.id}`);
+                                            setEditingUser(user);
+                                            setCurrentView('view_user');
+                                        }}
                                     >
                                         <div
                                             className={`grid gap-4 px-6 py-4 items-center border-l-4 hover:border-blue-200 transition-colors ${isSelected ? 'border-l-blue-500' : 'border-transparent'}`}
@@ -780,8 +866,17 @@ const UsersTab = () => {
                                                 if (col.id === 'actions') {
                                                     return (
                                                         <div key={col.id} className="flex items-center justify-end gap-1 relative" onClick={e => e.stopPropagation()}>
-                                                            <button className="hidden xl:flex p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                                                                <Mail size={16} />
+                                                            <button
+                                                                className="hidden xl:flex p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    // Feature: Clone User
+                                                                    setCloningUser(user);
+                                                                    setCurrentView('add');
+                                                                }}
+                                                                title="Clone User"
+                                                            >
+                                                                <Copy size={16} />
                                                             </button>
 
                                                             <button

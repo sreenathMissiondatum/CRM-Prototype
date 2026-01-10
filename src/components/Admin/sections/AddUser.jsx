@@ -4,34 +4,34 @@ import {
     Lock, Clock, Globe, Info, CheckCircle, AlertCircle, ChevronDown, Check, X, Search
 } from 'lucide-react';
 
-const AddUser = ({ onSave, onCancel, existingUsers = [] }) => {
+const AddUser = ({ onSave, onCancel, existingUsers = [], initialData = null }) => {
     // --- State ---
     const [formData, setFormData] = useState({
         // Identity
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
-        jobTitle: '',
+        firstName: initialData?.firstName || '',
+        lastName: initialData?.lastName || '',
+        email: '', // Always empty for clone/new
+        phone: initialData?.phone || '',
+        jobTitle: initialData?.jobTitle || '',
         photo: null,
 
         // Org
-        role: '',
-        reportsTo: '',
-        departments: [],
-        teams: [],
-        branches: [],
+        role: initialData?.role || '',
+        reportsTo: initialData?.reportsTo || '',
+        departments: initialData?.departments || [],
+        teams: initialData?.teams || [],
+        branches: initialData?.branches || [],
 
         // Security & Status
         status: 'Pending Activation', // MVP Rule: Always Pending Activation
-        userType: 'Internal',         // MVP Rule: Default to Internal
-        portalAccess: false,          // MVP Rule: Default Off for Internal
+        userType: initialData?.userType || 'Internal',         // MVP Rule: Default to Internal
+        portalAccess: initialData?.portalAccess || false,          // MVP Rule: Default Off for Internal
 
         // Preferences
-        locale: 'en-US',
-        timezone: 'UTC-5 (EST)',
-        dateFormat: 'MM/DD/YYYY',
-        numberFormat: '1,000.00'
+        locale: initialData?.locale || 'en-US',
+        timezone: initialData?.timezone || 'UTC-5 (EST)',
+        dateFormat: initialData?.dateFormat || 'MM/DD/YYYY',
+        numberFormat: initialData?.numberFormat || '1,000.00'
     });
 
     const [errors, setErrors] = useState({});
@@ -267,9 +267,9 @@ const AddUser = ({ onSave, onCancel, existingUsers = [] }) => {
                         <span>/</span>
                         <span className="hover:text-slate-800 cursor-pointer" onClick={onCancel}>Users</span>
                         <span>/</span>
-                        <span className="text-blue-600">Add User</span>
+                        <span className="text-blue-600">{initialData ? 'Clone User' : 'Add User'}</span>
                     </div>
-                    <h1 className="text-xl font-bold text-slate-900">Add New User</h1>
+                    <h1 className="text-xl font-bold text-slate-900">{initialData ? 'Clone User' : 'Add New User'}</h1>
                 </div>
                 <div className="flex items-center gap-3">
                     <button onClick={onCancel} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>

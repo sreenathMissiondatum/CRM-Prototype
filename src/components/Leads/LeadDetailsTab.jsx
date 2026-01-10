@@ -116,7 +116,7 @@ const LeadDetailsTab = ({ lead }) => {
             // S7: History (Internal)
             history: {
                 priorBorrower: false,
-                prevLoanId: '',
+                previousLoans: [], // New array for IDs
                 performance: 'N/A'
             },
             // S8: Credit (Self-reported)
@@ -141,6 +141,11 @@ const LeadDetailsTab = ({ lead }) => {
     const [isEINRevealed, setIsEINRevealed] = useState(false);
     const einTimer = React.useRef(null);
     const [toastMessage, setToastMessage] = useState(null);
+
+    // --- State: Previous Loan IDs (New) ---
+    const [newLoanId, setNewLoanId] = useState('');
+    const [loanIdError, setLoanIdError] = useState(null);
+
 
 
     const [editing1071Contact, setEditing1071Contact] = useState(null); // Objects { id, ...data }
@@ -462,6 +467,95 @@ const LeadDetailsTab = ({ lead }) => {
         }));
     };
 
+
+    // --- Helper: Previous Loans ---
+    const handlePriorBorrowerChange = (isChecked) => {
+        setFormData(prev => ({
+            ...prev,
+            history: {
+                ...prev.history,
+                priorBorrower: isChecked,
+                // RESET STATE ON UNCHECK
+                previousLoans: isChecked ? prev.history.previousLoans : [],
+                performance: isChecked ? prev.history.performance : 'N/A'
+            }
+        }));
+        if (!isChecked) {
+            setNewLoanId('');
+            setLoanIdError(null);
+        }
+    };
+
+    const addPreviousLoan = () => {
+        const trimmedId = newLoanId.trim();
+        if (!trimmedId) return;
+
+        // 1. Validation: Format (Alphanumeric + Hyphen)
+        const isValidFormat = /^[a-zA-Z0-9-]+$/.test(trimmedId);
+        if (!isValidFormat) {
+            setLoanIdError("Enter a valid Loan ID.");
+            return;
+        }
+
+        // 2. Validation: Duplicate
+        const isDuplicate = formData.history.previousLoans?.some(l => l.id.toUpperCase() === trimmedId.toUpperCase());
+        if (isDuplicate) {
+            setLoanIdError("This loan ID has already been added.");
+            return;
+        }
+
+        // 3. Add & Clear
+        setFormData(prev => ({
+            ...prev,
+            history: {
+                ...prev.history,
+                previousLoans: [
+                    ...(prev.history.previousLoans || []),
+                    { id: trimmedId, status: 'Closed', date: '2023-01-01' } // Mock details
+                ].sort((a, b) => new Date(b.date) - new Date(a.date)) // Sort by most recent
+            }
+        }));
+        setNewLoanId('');
+        setLoanIdError(null);
+
+        // 4. Audit Log (Strict JSON)
+        console.log(JSON.stringify({
+            action: "PRIOR_LOAN_ID_ADDED",
+            entity: "Lead",
+            field: "previousLoanIds",
+            loanId: trimmedId,
+            leadId: lead?.id || 'LEAD-7782',
+            userId: 'USER-CURRENT-ID', // Mock
+            timestamp: new Date().toISOString()
+        }));
+    };
+
+    const removePreviousLoan = (loanId) => {
+        setFormData(prev => ({
+            ...prev,
+            history: {
+                ...prev.history,
+                previousLoans: prev.history.previousLoans.filter(l => l.id !== loanId)
+            }
+        }));
+
+        // Audit Log (Strict JSON)
+        console.log(JSON.stringify({
+            action: "PRIOR_LOAN_ID_REMOVED",
+            entity: "Lead",
+            field: "previousLoanIds",
+            loanId: loanId,
+            leadId: lead?.id || 'LEAD-7782',
+            userId: 'USER-CURRENT-ID', // Mock
+            timestamp: new Date().toISOString()
+        }));
+    };
+
+    const viewPreviousLoan = (loanId) => {
+        // Navigates to linked loan record if accessible
+        setToastMessage(`Opening details for Loan ${loanId}...`);
+        setTimeout(() => setToastMessage(null), 3000);
+    };
 
     // --- Validation ---
     const totalOwnership = formData.ownership.reduce((sum, owner) => sum + (parseFloat(owner.percent) || 0), 0);
@@ -1173,13 +1267,102 @@ const LeadDetailsTab = ({ lead }) => {
                         <input
                             type="checkbox"
                             checked={formData.history.priorBorrower}
-                            onChange={e => handleChange('history', 'priorBorrower', e.target.checked)}
+                            onChange={e => handlePriorBorrowerChange(e.target.checked)}
                             className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
                         />
                         <span className="text-sm font-medium text-slate-700">Prior Borrower with this CDFI?</span>
                     </div>
-                    <Field label="Previous Loan Performance" value={formData.history.performance} onChange={v => handleChange('history', 'performance', v)} />
+                    {/* Performance field disabled if not prior borrower */}
+                    <Field
+                        label="Previous Loan Performance"
+                        value={formData.history.performance}
+                        onChange={v => handleChange('history', 'performance', v)}
+                        readOnly={!formData.history.priorBorrower}
+                        className={!formData.history.priorBorrower ? "opacity-50 pointer-events-none" : ""}
+                    />
                 </div>
+
+                {/* Previous Loan IDs Table */}
+                {formData.history.priorBorrower && (
+                    <div className="mt-6 border-t border-slate-100 pt-4 animate-in fade-in slide-in-from-top-1">
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Previous Loan IDs</label>
+
+                        <div className="flex flex-col gap-1 mb-3">
+                            <div className="flex gap-2">
+                                <input
+                                    className={`text-sm border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-100 text-slate-800 flex-1 ${loanIdError ? 'border-red-300 focus:border-red-500 bg-red-50' : 'border-slate-300 focus:border-blue-500'}`}
+                                    placeholder="Enter Loan ID (e.g., LN-2023-001)"
+                                    value={newLoanId}
+                                    onChange={e => {
+                                        setNewLoanId(e.target.value);
+                                        if (loanIdError) setLoanIdError(null); // Clear error on type
+                                    }}
+                                    onKeyDown={e => e.key === 'Enter' && addPreviousLoan()}
+                                />
+                                <button
+                                    onClick={addPreviousLoan}
+                                    disabled={!newLoanId.trim()}
+                                    className="px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    Add
+                                </button>
+                            </div>
+                            {loanIdError && (
+                                <div className="text-xs text-red-600 font-medium flex items-center gap-1 animate-in slide-in-from-top-1">
+                                    <AlertCircle size={12} /> {loanIdError}
+                                </div>
+                            )}
+                        </div>
+
+                        {formData.history.previousLoans && formData.history.previousLoans.length > 0 ? (
+                            <div className="border border-slate-200 rounded-lg overflow-hidden">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="bg-slate-50 border-b border-slate-200 font-medium text-slate-500 text-xs uppercase">
+                                        <tr>
+                                            <th className="px-4 py-2">Loan ID</th>
+                                            <th className="px-4 py-2">Loan Date</th>
+                                            <th className="px-4 py-2">Status</th>
+                                            <th className="px-4 py-2 text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {formData.history.previousLoans.map(loan => (
+                                            <tr key={loan.id} className="group hover:bg-slate-50 transition-colors">
+                                                <td className="px-4 py-2 font-mono text-slate-700">{loan.id}</td>
+                                                <td className="px-4 py-2 text-slate-500">{loan.date}</td>
+                                                <td className="px-4 py-2">
+                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border uppercase ${loan.status === 'Closed' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                                                        {loan.status}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-2 text-right flex justify-end gap-2">
+                                                    <button
+                                                        onClick={() => viewPreviousLoan(loan.id)}
+                                                        className="text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+                                                        title="View Loan Details"
+                                                    >
+                                                        <Eye size={14} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => removePreviousLoan(loan.id)}
+                                                        className="text-xs font-medium text-slate-400 hover:text-red-600 px-1 ml-2 transition-colors"
+                                                        title="Remove from history"
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            <div className="text-xs text-slate-400 italic bg-slate-50 p-3 rounded border border-dashed border-slate-200 text-center">
+                                No previous loans added.
+                            </div>
+                        )}
+                    </div>
+                )}
             </Section>
 
             {/* S8: Credit Signals */}
