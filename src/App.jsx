@@ -313,7 +313,7 @@ function App() {
             <Account360 onBack={() => setActiveTab('accounts')} initialAccount={selectedAccount} />
           ) : activeTab === 'create-lead' ? (
             <div className="h-full overflow-y-auto">
-              <CreateLead onNavigate={setActiveTab} />
+              <CreateLead onNavigate={setActiveTab} onSetSelectedLead={setSelectedLeadId} />
             </div>
           ) : activeTab.startsWith('marketing') ? (
             <div className="h-full overflow-y-auto">
