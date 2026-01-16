@@ -10,8 +10,7 @@ import LeadsLayout from './components/Leads/LeadsLayout';
 import CreateLead from './components/Leads/CreateLead';
 import AccountDetail from './components/Accounts/AccountDetail';
 import ContactDetail from './components/Contacts/ContactDetail';
-import LoanProgramsList from './components/LoanPrograms/LoanProgramsList';
-import LoanProgramsListMVP from './components/Loans/LoanPrograms/LoanProgramMVP/LoanProgramsListMVP';
+import LoanProgramRulesEngine from './components/LoanPrograms/RulesEngine/LoanProgramRulesEngine';
 import AccountsList from './components/Accounts/AccountsList';
 import Account360 from './components/Accounts/Account360';
 import AdminPanel from './components/Admin/AdminPanel';
@@ -284,13 +283,7 @@ function App() {
 
         <div className="relative flex-1 flex flex-col min-h-0">
           {activeTab === 'loan-programs' ? (
-            <div className="h-full overflow-y-auto">
-              <LoanProgramsList />
-            </div>
-          ) : activeTab === 'loan-programs-mvp' ? (
-            <div className="h-full overflow-y-auto">
-              <LoanProgramsListMVP />
-            </div>
+            <LoanProgramRulesEngine />
           ) : activeTab === 'account-detail' ? (
             <AccountDetail
               onBack={handleBackFromDetail}

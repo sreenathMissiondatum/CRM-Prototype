@@ -297,38 +297,6 @@ const LeadSummaryView = ({ lead, assignedPrograms = [], onUpdateAssignedPrograms
                 {/* Left Column (2/3) */}
                 <div className="xl:col-span-2 space-y-6">
 
-                    {/* 2. Borrower Snapshot */}
-                    {/* 2. Borrower Snapshot (Reusable Board) */}
-                    {/* 2. Borrower Snapshot (Lead Specific) */}
-                    <LeadBorrowerSnapshot
-                        data={{
-                            legalName: data.businessName,
-                            industry: data.industry,
-                            entityType: 'LLC',
-                            taxId: '**-***4592',
-                            yearsInBusiness: data.yearsInBusiness,
-                            website: 'jenkinscatering.com',
-                            city: data.location ? data.location.split(',')[0] : 'Unknown City',
-                            state: data.location ? data.location.split(',')[1]?.trim() : 'Unknown State',
-                            censusTract: data.censusTract,
-                            badges: data.impactFlags
-                        }}
-                        contact={{
-                            name: data.name,
-                            pronouns: getPronouns(data.gender),
-                            role: data.role,
-                            isOwner: true,
-                            ownershipPercentage: 100,
-                            phone: data.phone,
-                            email: data.email,
-                            preferredMethod: data.preferredContact,
-                            creditRange: data.creditScore,
-                            avatar: data.avatar,
-                            status: data.status,
-                            lastActive: data.lastActive
-                        }}
-                    />
-
                     {/* 3. Loan Intent */}
                     <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col gap-0 relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-50 to-transparent rounded-bl-full -mr-10 -mt-10 pointer-events-none"></div>
@@ -448,6 +416,36 @@ const LeadSummaryView = ({ lead, assignedPrograms = [], onUpdateAssignedPrograms
                         onClose={() => setIsProgramSelectorOpen(false)}
                         onSelect={handleProgramSelect}
                         currentProgramIds={assignedPrograms}
+                    />
+
+                    {/* 2. Borrower Snapshot (Lead Specific) */}
+                    <LeadBorrowerSnapshot
+                        data={{
+                            legalName: data.businessName,
+                            industry: data.industry,
+                            entityType: 'LLC',
+                            taxId: '**-***4592',
+                            yearsInBusiness: data.yearsInBusiness,
+                            website: 'jenkinscatering.com',
+                            city: data.location ? data.location.split(',')[0] : 'Unknown City',
+                            state: data.location ? data.location.split(',')[1]?.trim() : 'Unknown State',
+                            censusTract: data.censusTract,
+                            badges: data.impactFlags
+                        }}
+                        contact={{
+                            name: data.name,
+                            pronouns: getPronouns(data.gender),
+                            role: data.role,
+                            isOwner: true,
+                            ownershipPercentage: 100,
+                            phone: data.phone,
+                            email: data.email,
+                            preferredMethod: data.preferredContact,
+                            creditRange: data.creditScore,
+                            avatar: data.avatar,
+                            status: data.status,
+                            lastActive: data.lastActive
+                        }}
                     />
 
                     <ReadinessChecklistDrawer

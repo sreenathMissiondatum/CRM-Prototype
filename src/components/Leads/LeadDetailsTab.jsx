@@ -80,7 +80,7 @@ const LeadDetailsTab = ({ lead, readOnly }) => {
             },
             // S2: Identity
             identity: {
-                legalName: lead?.company || lead?.businessName || 'Jenkins Catering Services, LLC',
+                businessName: lead?.company || lead?.businessName || 'Jenkins Catering Services, LLC',
                 dba: '',
                 phone: lead?.phone || '(313) 555-0199',
                 email: lead?.email || 'sarah@jenkinscatering.com',
@@ -118,6 +118,10 @@ const LeadDetailsTab = ({ lead, readOnly }) => {
             // S6: Intent
             intent: {
                 amount: lead?.amount || 75000,
+                // NEW: Program Allocations (Default to single allocation)
+                programs: [
+                    { id: 1, name: 'General Working Capital', amount: lead?.amount || 75000, percent: 100 }
+                ],
                 term: 36,
                 collateral: ['Vehicle'],
                 uses: ['Equipment Purchase'],
@@ -782,14 +786,18 @@ const LeadDetailsTab = ({ lead, readOnly }) => {
             <IdentificationSection
                 isOpen={sections.system}
                 onToggle={() => toggleSection('system')}
-                formData={formData}
+                formData={{
+                    source: lead?.source || 'Web Portal',
+                    createdDate: formData.system.createdDate,
+                    assignedOfficer: lead?.assignedOfficer || 'Alex Morgan'
+                }}
             />
 
             {/* S2: Business Identity */}
             <BusinessIdentitySection
                 isOpen={sections.identity}
                 onToggle={() => toggleSection('identity')}
-                formData={formData}
+                formData={formData.identity}
                 handleChange={(field, value) => handleChange('identity', field, value)}
             />
 
@@ -827,8 +835,37 @@ const LeadDetailsTab = ({ lead, readOnly }) => {
             <IndustrySection
                 isOpen={sections.industry}
                 onToggle={() => toggleSection('industry')}
-                formData={formData}
-                handleChange={(field, value) => handleChange('industry', field, value)}
+                formData={{
+                    naicsCode: formData.industry.naics?.code || '',
+                    naicsDescription: formData.industry.naics?.title || '',
+                    sector: formData.industry.sector || '',
+                    address: formData.industry.address?.street || '',
+                    city: formData.industry.address?.city || '',
+                    state: formData.industry.address?.state || '',
+                    zip: formData.industry.address?.zip || ''
+                }}
+                handleChange={(field, value) => {
+                    // Map flat updates back to nested state
+                    if (field === 'naicsCode') {
+                        handleChange('industry', 'naics', { ...formData.industry.naics, code: value });
+                    } else if (field === 'naicsDescription') {
+                        handleChange('industry', 'naics', { ...formData.industry.naics, title: value });
+                    } else if (field === 'sector') {
+                        handleChange('industry', 'sector', value);
+                    } else {
+                        // Address fields
+                        const addressFieldMap = {
+                            'address': 'street',
+                            'city': 'city',
+                            'state': 'state',
+                            'zip': 'zip'
+                        };
+                        const nestedField = addressFieldMap[field];
+                        if (nestedField) {
+                            handleChange('industry', 'address', { ...formData.industry.address, [nestedField]: value });
+                        }
+                    }
+                }}
             />
 
             {/* S5: Business Background & Impact */}
@@ -843,8 +880,9 @@ const LeadDetailsTab = ({ lead, readOnly }) => {
             <LoanIntentSection
                 isOpen={sections.intent}
                 onToggle={() => toggleSection('intent')}
-                formData={formData}
+                formData={formData.intent} // Corrected: Pass intent object, not root
                 handleChange={(field, value) => handleChange('intent', field, value)}
+                onUpdatePrograms={(programs) => handleChange('intent', 'programs', programs)} // Specific handler
             />
 
             {/* S7: Borrowing History */}

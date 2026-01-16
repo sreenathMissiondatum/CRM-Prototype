@@ -55,7 +55,7 @@ const CreateLead = ({ onNavigate, onSetSelectedLead }) => {
         id: 'LEAD-NEW', // Placeholder
         createdDate: new Date().toISOString().split('T')[0],
         source: 'Web Portal', // Default
-        assignedOfficer: 'CurrentUser', // Default to current user
+        assignedOfficer: 'Alex Morgan', // Default to current user
 
         // S2: Identity
         businessName: '',
