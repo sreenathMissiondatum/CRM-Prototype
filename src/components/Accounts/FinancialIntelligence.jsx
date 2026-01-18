@@ -3,7 +3,7 @@ import {
     ShieldCheck, Calendar, Info, Lock,
     TrendingUp, TrendingDown, Minus,
     FileText, Users, Download, Activity,
-    DollarSign, Percent, BarChart3, PieChart
+    DollarSign, Percent, BarChart3, PieChart, Pen
 } from 'lucide-react';
 
 const FinancialIntelligence = ({ accountId = 'ACC-12345', onEditSource }) => {
@@ -17,7 +17,7 @@ const FinancialIntelligence = ({ accountId = 'ACC-12345', onEditSource }) => {
             Account_ID: accountId,
             ID_finStmnt_rp1: 'STM-2024-001',
             type_finStmnt_rp1: 'Tax Return',
-            status_finStmnt_rp1: 'Locked',
+            status_finStmnt_rp1: 'Draft',
             importMethod_finStmnt_rp1: 'OCR',
             startDt_rp1: 'Jan 1, 2024',
             endDt_rp1: 'Dec 31, 2024',
