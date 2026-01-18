@@ -280,6 +280,12 @@ const ContactsSection = ({
         { value: 'prefer_not_to_say', label: 'Prefer not to provide' }
     ];
 
+    const VETERAN_STATUS_OPTIONS = [
+        { value: 'veteran', label: 'I identify as a veteran' },
+        { value: 'non_veteran', label: 'I identify as a non-veteran' },
+        { value: 'prefer_not_to_say', label: 'Prefer not to provide' }
+    ];
+
     return (
         <Section
             title="Contacts & Ownership"
@@ -803,6 +809,27 @@ const ContactsSection = ({
                                                         >
                                                             <option value="" disabled>Select Gender...</option>
                                                             {GENDER_OPTIONS.map(opt => (
+                                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                            ))}
+                                                        </select>
+                                                        <ChevronDown size={14} className="absolute right-3 top-3 text-slate-400 pointer-events-none" />
+                                                    </div>
+                                                </div>
+
+                                                {/* VETERAN STATUS - Single Picklist */}
+                                                <div className="col-span-4">
+                                                    <label className="block text-[10px] uppercase text-slate-400 font-bold mb-1.5">Confidential Veteran Status</label>
+                                                    <div className="relative">
+                                                        <select
+                                                            value={contact.veteranStatus || ''}
+                                                            onChange={(e) => {
+                                                                onUpdateContact(contact.id, 'veteranStatus', e.target.value);
+                                                                if (onAudit) onAudit('CONTACT_VETERAN_STATUS_UPDATED', { contactId: contact.id, newValue: '***MASKED***' });
+                                                            }}
+                                                            className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white appearance-none outline-none focus:border-blue-400 text-slate-700"
+                                                        >
+                                                            <option value="" disabled>Select Status...</option>
+                                                            {VETERAN_STATUS_OPTIONS.map(opt => (
                                                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
                                                             ))}
                                                         </select>

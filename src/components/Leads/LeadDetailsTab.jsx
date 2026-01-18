@@ -297,6 +297,7 @@ const LeadDetailsTab = ({ lead, readOnly }) => {
             isOwner: true,
             ownerLink: newOwnerId,
             isPrimary: isFirstOwner, // First owner is Primary by default
+            veteranStatus: '',
             firstName: '',
             lastName: '',
             email: '',
@@ -490,7 +491,7 @@ const LeadDetailsTab = ({ lead, readOnly }) => {
         const newId = `c${Date.now()}`;
         setFormData(prev => ({
             ...prev,
-            contacts: [...prev.contacts, { id: newId, role: 'Partner', recordType: '', isPrimary: false, firstName: '', lastName: '', email: '', phone: '', method: 'Email' }]
+            contacts: [...prev.contacts, { id: newId, role: 'Partner', recordType: '', isPrimary: false, veteranStatus: '', firstName: '', lastName: '', email: '', phone: '', method: 'Email' }]
         }));
         setIsDirty(true);
     };
@@ -882,6 +883,14 @@ const LeadDetailsTab = ({ lead, readOnly }) => {
                 onToggle={() => toggleSection('identity')}
                 formData={formData.identity}
                 handleChange={(field, value) => handleChange('identity', field, value)}
+            />
+
+            {/* S2b: Business Background & Impact (Restored) */}
+            <BackgroundSection
+                isOpen={sections.background}
+                onToggle={() => toggleSection('background')}
+                formData={formData.background}
+                handleChange={(field, value) => handleChange('background', field, value)}
             />
 
             {/* S3: Contacts & Ownership (Restored Feature Parity) */}
