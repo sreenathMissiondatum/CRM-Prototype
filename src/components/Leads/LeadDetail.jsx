@@ -788,6 +788,7 @@ const LeadDetail = ({ lead, onBack, onViewAccount, onViewContact, onUpdateLead, 
 
                     {activeTab === 'details' && (
                         <LeadDetailsTab
+                            key={lead.id}
                             lead={lead}
                             readOnly={isReadOnly}
                         />

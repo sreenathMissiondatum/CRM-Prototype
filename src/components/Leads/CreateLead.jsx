@@ -24,6 +24,7 @@ import ConsentSection from './Sections/ConsentSection';
 
 import { MOCK_ACCOUNTS, MOCK_CONTACTS } from '../../data/mockReferralData';
 import { CANONICAL_CONTACTS } from '../../data/canonicalContacts'; // For 1071 defaults/structure if needed
+import { deriveCensusData } from '../../utils/censusUtils';
 
 const CreateLead = ({ onNavigate, onSetSelectedLead }) => {
     const [isDirty, setIsDirty] = useState(false);
@@ -63,7 +64,9 @@ const CreateLead = ({ onNavigate, onSetSelectedLead }) => {
         entityType: 'LLC', // Default
         ein: '',
         phone: '',
+        phone: '',
         email: '',
+        website: '',
 
         // S3: Contacts & Ownership
         contacts: [
@@ -87,20 +90,23 @@ const CreateLead = ({ onNavigate, onSetSelectedLead }) => {
         yearsInBusiness: 0, // Derived
         isStartup: true, // Derived < 2 years
         fteCount: '',
+        fteCount: '',
         description: '',
+        // Impact Flags
+        isMinorityOwned: false,
+        isWomanOwned: false,
+        isVeteranOwned: false,
+        isNativeAmericanOwned: false,
+        isLGBTQOwned: false,
+        isDisabilityOwned: false,
+        isLowIncomeCommunity: false,
 
-        // S6: Loan Intent
-        loanAmount: '',
-        loanTerm: '',
-        useOfFunds: [],
-        useOfFundsDetail: '',
-        ownerContribution: '',
-        otherFunding: '',
-        // totalProjectCost derived
+        // S6: Loan Intent (Funding Scenarios)
+        fundingScenarios: [],
 
         // S7: Borrowing History
         history: {
-            hasPriorLoans: false,
+            priorBorrower: false,
             previousLoans: []
         },
 
@@ -128,7 +134,7 @@ const CreateLead = ({ onNavigate, onSetSelectedLead }) => {
     // --- Logic & Effects ---
 
     // Derived: Total Project Cost
-    const totalProjectCost = (Number(formData.loanAmount) || 0) + (Number(formData.ownerContribution) || 0) + (Number(formData.otherFunding) || 0);
+    // Derived: Years in Business & Startup
 
     // Derived: Years in Business & Startup
     useEffect(() => {
@@ -143,6 +149,22 @@ const CreateLead = ({ onNavigate, onSetSelectedLead }) => {
             }));
         }
     }, [formData.dateEstablished]);
+
+    // Derived: Census Data from ZIP
+    useEffect(() => {
+        if (formData.zip && formData.zip.length >= 5) {
+            const derived = deriveCensusData(formData.zip);
+            setFormData(prev => {
+                if (prev.censusTract === derived.censusTract) return prev;
+                return {
+                    ...prev,
+                    censusTract: derived.censusTract,
+                    isLowIncome: derived.isLowIncome // Maps to isLic conceptually, assuming flat model uses isLowIncome? 
+                    // Let's check initial state: "isLowIncome: false". Correct.
+                };
+            });
+        }
+    }, [formData.zip]);
 
     // Handle Change Helper
     const handleChange = (section, field, value) => {
@@ -182,6 +204,79 @@ const CreateLead = ({ onNavigate, onSetSelectedLead }) => {
             ...prev,
             contacts: prev.contacts.filter(c => c.id !== id)
         }));
+    };
+
+    // --- Borrowing History Logic ---
+    const [newLoanId, setNewLoanId] = useState('');
+    const [loanIdError, setLoanIdError] = useState(null);
+    const [deleteConfirm, setDeleteConfirm] = useState(null);
+
+    const handlePriorBorrowerChange = (isChecked) => {
+        setFormData(prev => ({
+            ...prev,
+            history: {
+                ...prev.history,
+                priorBorrower: isChecked, // Map to priorBorrower (was hasPriorLoans in older drafts, ensuring consistency)
+                previousLoans: isChecked ? prev.history.previousLoans : []
+            }
+        }));
+        if (!isChecked) {
+            setNewLoanId('');
+            setLoanIdError(null);
+            setDeleteConfirm(null);
+        }
+    };
+
+    const addPreviousLoan = () => {
+        const trimmedId = newLoanId.trim();
+        if (!trimmedId) return;
+
+        // 1. Validation: Format
+        const isValidFormat = /^[a-zA-Z0-9-]+$/.test(trimmedId);
+        if (!isValidFormat) {
+            setLoanIdError("Enter a valid Loan ID.");
+            return;
+        }
+
+        // 2. Validation: Duplicate
+        const isDuplicate = formData.history.previousLoans?.some(l => l.id.toUpperCase() === trimmedId.toUpperCase());
+        if (isDuplicate) {
+            setLoanIdError("This loan ID has already been added.");
+            return;
+        }
+
+        // 3. Add & Clear
+        setFormData(prev => ({
+            ...prev,
+            history: {
+                ...prev.history,
+                previousLoans: [
+                    ...(prev.history.previousLoans || []),
+                    { id: trimmedId, status: 'Closed', date: '2023-01-01' } // Mock details
+                ]
+            }
+        }));
+        setNewLoanId('');
+        setLoanIdError(null);
+    };
+
+    const deleteLoan = (loanId) => {
+        if (deleteConfirm === loanId) {
+            setFormData(prev => ({
+                ...prev,
+                history: {
+                    ...prev.history,
+                    previousLoans: prev.history.previousLoans.filter(l => l.id !== loanId)
+                }
+            }));
+            setDeleteConfirm(null);
+        } else {
+            setDeleteConfirm(loanId);
+        }
+    };
+
+    const viewPreviousLoan = (loanId) => {
+        console.log("Viewing loan:", loanId);
     };
 
     // Save Action
@@ -267,13 +362,11 @@ const CreateLead = ({ onNavigate, onSetSelectedLead }) => {
                 handleChange={(field, value) => handleChange(null, field, value)}
             />
 
-            {/* S6: Loan Intent */}
             <LoanIntentSection
                 isOpen={sections.intent}
                 onToggle={() => toggleSection('intent')}
                 formData={formData}
-                handleChange={(field, value) => handleChange(null, field, value)}
-                totalProjectCost={totalProjectCost}
+                onUpdateScenarios={(scenarios) => handleChange(null, 'fundingScenarios', scenarios)}
             />
 
             {/* S7: Borrowing History */}
@@ -282,6 +375,14 @@ const CreateLead = ({ onNavigate, onSetSelectedLead }) => {
                 onToggle={() => toggleSection('history')}
                 formData={formData}
                 handleChange={(field, value) => handleChange('history', field, value)}
+                onPriorBorrowerChange={handlePriorBorrowerChange}
+                onAddLoan={addPreviousLoan}
+                onDeleteLoan={deleteLoan}
+                onViewLoan={viewPreviousLoan}
+                newLoanId={newLoanId}
+                setNewLoanId={setNewLoanId}
+                loanIdError={loanIdError}
+                deleteConfirm={deleteConfirm}
             />
 
             {/* S8: Credit Signals */}

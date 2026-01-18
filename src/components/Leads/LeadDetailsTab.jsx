@@ -21,6 +21,7 @@ import DemographicsSection from './Sections/DemographicsSection';
 import ConsentSection from './Sections/ConsentSection';
 import { CANONICAL_CONTACTS } from '../../data/canonicalContacts';
 import { MOCK_ACCOUNTS, MOCK_CONTACTS } from '../../data/mockReferralData';
+import { deriveCensusData } from '../../utils/censusUtils';
 
 const LeadDetailsTab = ({ lead, readOnly }) => {
     // --- State: Sections Expansion ---
@@ -50,6 +51,7 @@ const LeadDetailsTab = ({ lead, readOnly }) => {
             // Map canonical fields to Lead view structure if needed, or just use as is
             // Ensure Role logic aligns
             role: c.roles.includes('Owner') ? 'Owner' : c.roles[0] || 'Partner',
+            recordType: c.roles.includes('Owner') ? 'Owner' : '',
             isOwner: c.roles.includes('Owner'),
             ownerLink: c.roles.includes('Owner') ? c.id : null // Auto-link if Owner
         }));
@@ -65,7 +67,15 @@ const LeadDetailsTab = ({ lead, readOnly }) => {
                 isCommonHb: false,
                 otherBusinesses: false,
                 otherBusPercentage: '',
-                otherBusDescription: ''
+                otherBusDescription: '',
+                // Personal & Professional
+                dob: '',
+                industryExperience: '',
+                ownershipExperience: '',
+                demographicSource: '',
+                lmiStatus: '',
+                ssn: '',
+                portalAccess: false
             }));
 
 
@@ -87,11 +97,42 @@ const LeadDetailsTab = ({ lead, readOnly }) => {
                 website: 'www.jenkinscatering.com',
                 entityType: 'LLC',
                 ein: '84-1734592', // Real mocked value
-                taxIdLocked: true
+                taxIdLocked: true,
+                // Moved from Industry
+                address: '123 Industrial Blvd',
+                city: 'Detroit',
+                state: 'MI',
+                zip: '48201',
+                website: 'www.jenkinscatering.com', // Consolidated here
+                // Census Data (Moved from Industry)
+                censusTract: '48201223100', // Initial Mock
+                isLowIncome: true
             },
             // S3: Ownership & Contacts
             ownership: initialOwnership.length > 0 ? initialOwnership : [
-                { id: 1, firstName: 'Sarah', lastName: 'Jenkins', percent: 100, isCommonHb: false, otherBusinesses: false, otherBusPercentage: '', otherBusDescription: '' } // Fallback
+                {
+                    id: 1,
+                    firstName: 'Sarah',
+                    lastName: 'Jenkins',
+                    percent: 100,
+                    isCommonHb: false,
+                    otherBusinesses: false,
+                    otherBusPercentage: '',
+                    otherBusDescription: '',
+                    // Personal & Professional
+                    dob: '1980-05-15',
+                    industryExperience: 15,
+                    ownershipExperience: 10,
+                    demographicSource: 'Self-reported by applicant',
+                    lmiStatus: 'Not LMI',
+                    ssn: '123-45-6789',
+                    portalAccess: true,
+                    // Household
+                    incGros_hhd: 120000,
+                    netWorth_hhd: 450000,
+                    amtExistLoans_hhd: 0,
+                    dServExistLoans_mo_hhd: 0
+                }
             ],
             contacts: initialContacts,
 
@@ -99,35 +140,41 @@ const LeadDetailsTab = ({ lead, readOnly }) => {
             industry: {
                 naics: { code: '484110', title: 'General Freight Trucking, Local' },
                 sector: 'Transportation and Warehousing',
-                address: {
-                    street: '123 Industrial Blvd',
-                    city: 'Detroit',
-                    state: 'MI',
-                    zip: '48201'
-                },
-                censusTract: '48201223100',
-                isLic: true
+                // Address moved to Identity
+                // Census moved to Identity
             },
             // S5: Background
             background: {
-                establishedDate: '2020-03-15',
+                dateEstablished: '2020-03-15', // Renamed from establishedDate
+                yearsInBusiness: 3, // Calculated
                 fteCount: 12,
                 isStartup: false,
-                description: 'Small logistics company specializing in last-mile delivery.'
+                description: 'Small logistics company specializing in last-mile delivery.',
+                // Impact Flags
+                isMinorityOwned: false,
+                isWomanOwned: true, // Example based on Sarah Jenkins
+                isVeteranOwned: false,
+                isNativeAmericanOwned: false,
+                isLGBTQOwned: false,
+                isDisabilityOwned: false,
+                isLowIncomeCommunity: true
             },
             // S6: Intent
+            // S6: Intent (Funding Scenarios)
             intent: {
-                amount: lead?.amount || 75000,
-                // NEW: Program Allocations (Default to single allocation)
-                programs: [
-                    { id: 1, name: 'General Working Capital', amount: lead?.amount || 75000, percent: 100 }
-                ],
-                term: 36,
-                collateral: ['Vehicle'],
-                uses: ['Equipment Purchase'],
-                usesDetail: 'Purchase 2 new vans.',
-                ownerContribution: 10000,
-                otherFunding: 0
+                fundingScenarios: [
+                    {
+                        id: 1,
+                        name: 'Preliminary Working Capital',
+                        amount: lead?.amount || 75000,
+                        term: 36,
+                        useOfFunds: ['Working Capital'],
+                        useOfFundsDetail: 'Initial capital request.',
+                        ownerContribution: 10000,
+                        otherFunding: 0,
+                        status: 'Draft'
+                    }
+                ]
             },
             // S7: History (Internal)
             history: {
@@ -137,9 +184,9 @@ const LeadDetailsTab = ({ lead, readOnly }) => {
             },
             // S8: Credit (Self-reported)
             credit: {
-                contactScoreRange: '650-700',
-                businessScoreRange: 'N/A',
-                reportedDate: '2023-11-10'
+                creditScoreRange: '650-699', // Corrected range
+                businessScore: '78',
+                creditReportDate: '2023-11-10'
             },
             // S9: Referral
             referral: {
@@ -190,6 +237,26 @@ const LeadDetailsTab = ({ lead, readOnly }) => {
         setIsDirty(true);
     };
 
+    // --- Effect: Derive Census Data from ZIP ---
+    useEffect(() => {
+        if (formData.identity.zip) {
+            const derived = deriveCensusData(formData.identity.zip);
+            setFormData(prev => {
+                // Avoid infinite loop if values match
+                if (prev.identity.censusTract === derived.censusTract) return prev;
+
+                return {
+                    ...prev,
+                    identity: {
+                        ...prev.identity,
+                        censusTract: derived.censusTract,
+                        isLowIncome: derived.isLowIncome
+                    }
+                };
+            });
+        }
+    }, [formData.identity.zip]);
+
     // --- Ownership & Contact Logic ---
 
     // 1. Add Owner Row
@@ -212,12 +279,21 @@ const LeadDetailsTab = ({ lead, readOnly }) => {
             incGros_hhd: '',
             netWorth_hhd: '',
             amtExistLoans_hhd: '',
-            dServExistLoans_mo_hhd: ''
+            dServExistLoans_mo_hhd: '',
+            // Personal & Professional (Owner Only)
+            dob: '',
+            industryExperience: '',
+            ownershipExperience: '',
+            demographicSource: '',
+            lmiStatus: '',
+            ssn: '',
+            portalAccess: false
         };
 
         const newContact = {
             id: `c-own-${newOwnerId}-${Date.now()}`,
             role: 'Owner',
+            recordType: 'Owner',
             isOwner: true,
             ownerLink: newOwnerId,
             isPrimary: isFirstOwner, // First owner is Primary by default
@@ -414,7 +490,7 @@ const LeadDetailsTab = ({ lead, readOnly }) => {
         const newId = `c${Date.now()}`;
         setFormData(prev => ({
             ...prev,
-            contacts: [...prev.contacts, { id: newId, role: 'Partner', isPrimary: false, firstName: '', lastName: '', email: '', phone: '', method: 'Email' }]
+            contacts: [...prev.contacts, { id: newId, role: 'Partner', recordType: '', isPrimary: false, firstName: '', lastName: '', email: '', phone: '', method: 'Email' }]
         }));
         setIsDirty(true);
     };
@@ -646,72 +722,52 @@ const LeadDetailsTab = ({ lead, readOnly }) => {
     const checkedOwners = formData.ownership.filter(o => o.isCommonHb);
     const checkedCount = checkedOwners.length;
 
-    // Strict Matrix Validation
-    // 1 | * -> Valid (Implicit)
-    // 2+ | 1 -> INVALID
-    // 2+ | 2+ -> Valid
-    const isHouseholdMatrixValid = totalOwners === 1 ? true : !(totalOwners >= 2 && checkedCount === 1);
+
 
     // Household Financials Completeness
+    // Validation Helpers
+    // Household Matrix: Always valid now (0, 1, or many in household group allowed)
+    const isHouseholdMatrixValid = true;
+
     const areHouseholdFinancialsComplete = () => {
-        // Implicit Single Owner
-        if (totalOwners === 1) {
-            const owner = formData.ownership[0];
-            return owner.incGros_hhd && owner.netWorth_hhd && owner.amtExistLoans_hhd && owner.dServExistLoans_mo_hhd;
-        }
-
-        // Multi-Owner: Check only checked owners
-        if (checkedCount === 0) return true;
-
-        return checkedOwners.every(o =>
-            o.incGros_hhd && o.netWorth_hhd && o.amtExistLoans_hhd && o.dServExistLoans_mo_hhd
-        );
+        return formData.ownership.every(owner => {
+            // REQUIRED: All fields for ALL owners
+            // Note: 0 is valid, '' is not.
+            if (owner.incGros_hhd === '' || owner.incGros_hhd === undefined) return false;
+            if (owner.netWorth_hhd === '' || owner.netWorth_hhd === undefined) return false;
+            if (owner.amtExistLoans_hhd === '' || owner.amtExistLoans_hhd === undefined) return false;
+            if (owner.dServExistLoans_mo_hhd === '' || owner.dServExistLoans_mo_hhd === undefined) return false;
+            return true;
+        });
     };
 
     // --- Dynamic Household Grouping ---
     const getHouseholdGroups = () => {
         const groups = [];
-        const hasValidSharedHousehold = totalOwners >= 2 && checkedCount >= 2;
 
-        // 1. Add Shared Group (if valid)
-        if (hasValidSharedHousehold) {
+        // 1. Household Group (Aggregated)
+        // Includes ANY owner with isCommonHb = true
+        const householdOwners = formData.ownership.filter(o => o.isCommonHb);
+        if (householdOwners.length > 0) {
             groups.push({
-                id: 'shared-household',
-                type: 'Shared',
-                owners: checkedOwners,
-                label: checkedOwners.map(o => o.firstName).join(', ')
+                id: 'household-group',
+                type: 'Household',
+                owners: householdOwners,
+                label: householdOwners.map(o => o.firstName).join(', ')
             });
         }
 
-        // 2. Add Separate Groups
-        formData.ownership.forEach(owner => {
-            // Implicit Single Owner is technically a "Separate" group of 1 for rendering purposes, 
-            // unless we consider it "Shared/Implicit". logic below handles it:
-
-            // If Single Owner, not checked -> Separate Group
-            // If Multi Owner, Checked -> In Shared Group (skip here)
-            // If Multi Owner, Not Checked -> Separate Group
-
-            // Note: If totalOwners == 1, checkedCount is 0, hasValidSharedHousehold is false.
-            // So Single Owner falls through to here. Perfect.
-
-            if (hasValidSharedHousehold && owner.isCommonHb) return;
-
+        // 2. Individual Groups (Separate)
+        // Includes ANY owner with isCommonHb = false
+        const individualOwners = formData.ownership.filter(o => !o.isCommonHb);
+        individualOwners.forEach(owner => {
             groups.push({
-                id: `separate-${owner.id}`,
-                type: 'Separate',
+                id: `individual-${owner.id}`,
+                type: 'Individual',
                 owners: [owner],
                 label: `${owner.firstName} ${owner.lastName}`
             });
         });
-
-        // Implicit Single Owner Adjustment? 
-        // If totalOwners == 1, we want it to look like a "Household", not necessarily "Separate".
-        // But "Separate" group rendering logic works fine (Calculated for X).
-        // If we want "Calculated based on X", we can tweak the type if totalOwners == 1.
-        if (totalOwners === 1 && groups.length > 0) {
-            groups[0].type = 'Implicit';
-        }
 
         return groups;
     };
@@ -722,6 +778,13 @@ const LeadDetailsTab = ({ lead, readOnly }) => {
     const isTotalOwnershipValid = Math.abs(totalOwnershipPct - 100) < 0.01;
 
     const isOwnershipValid = () => {
+        // Contact Check: Record Type required for Non-Owners
+        const areContactsValid = formData.contacts.every(c => {
+            if (c.isOwner) return true; // Owners implicit
+            return !!c.recordType; // Non-owners must have recordType
+        });
+        if (!areContactsValid) return false;
+
         // Total Check
         if (!isTotalOwnershipValid) return false;
 
@@ -740,6 +803,24 @@ const LeadDetailsTab = ({ lead, readOnly }) => {
                 if (!owner.otherBusPercentage || isNaN(owner.otherBusPercentage) || owner.otherBusPercentage <= 0 || owner.otherBusPercentage > 100) return false;
                 if (!owner.otherBusDescription || owner.otherBusDescription.trim() === '') return false;
             }
+
+            // --- New Personal Details Validation ---
+            // DOB (Required, Not Future)
+            if (!owner.dob) return false;
+            if (new Date(owner.dob) > new Date()) return false;
+
+            // Experience (Required, >= 0, <= 99)
+            if (owner.industryExperience === '' || isNaN(owner.industryExperience) || owner.industryExperience < 0 || owner.industryExperience > 99) return false;
+            if (owner.ownershipExperience === '' || isNaN(owner.ownershipExperience) || owner.ownershipExperience < 0 || owner.ownershipExperience > 99) return false;
+
+            // Demographics & LMI (Required Picklists)
+            if (!owner.demographicSource) return false;
+            if (!owner.lmiStatus) return false;
+
+            // SSN (Required, 9 digits)
+            const ssnClean = (owner.ssn || '').replace(/\D/g, '');
+            if (ssnClean.length !== 9) return false;
+
             return true;
         });
     };
@@ -750,8 +831,8 @@ const LeadDetailsTab = ({ lead, readOnly }) => {
         // Rule: At least one loan if checked
         if (formData.history.previousLoans.length === 0) return false;
 
-        // Rule: All loans must have performance selected
-        return formData.history.previousLoans.every(l => l.loanPerformance && l.loanPerformance !== '');
+
+
     };
 
     const isReferralValid = () => {
@@ -763,6 +844,8 @@ const LeadDetailsTab = ({ lead, readOnly }) => {
     };
 
     const isValid = isOwnershipValid() && isBorrowingHistoryValid() && isReferralValid(); // Add other validations here if needed
+
+
 
     // --- Render ---
     return (
@@ -828,6 +911,7 @@ const LeadDetailsTab = ({ lead, readOnly }) => {
                     }
                 }}
                 readOnly={readOnly}
+                onAudit={auditLog}
             />
 
 
@@ -872,17 +956,16 @@ const LeadDetailsTab = ({ lead, readOnly }) => {
             <BackgroundSection
                 isOpen={sections.background}
                 onToggle={() => toggleSection('background')}
-                formData={formData}
+                formData={formData.background}
                 handleChange={(field, value) => handleChange('background', field, value)}
             />
 
-            {/* S6: Loan Intent */}
+            {/* S6: Loan Intent (Funding Scenarios) */}
             <LoanIntentSection
                 isOpen={sections.intent}
                 onToggle={() => toggleSection('intent')}
-                formData={formData.intent} // Corrected: Pass intent object, not root
-                handleChange={(field, value) => handleChange('intent', field, value)}
-                onUpdatePrograms={(programs) => handleChange('intent', 'programs', programs)} // Specific handler
+                formData={formData.intent}
+                onUpdateScenarios={(scenarios) => handleChange('intent', 'fundingScenarios', scenarios)}
             />
 
             {/* S7: Borrowing History */}
@@ -891,13 +974,22 @@ const LeadDetailsTab = ({ lead, readOnly }) => {
                 onToggle={() => toggleSection('history')}
                 formData={formData}
                 handleChange={(field, value) => handleChange('history', field, value)}
+                // Borrowing History Specific Props
+                onPriorBorrowerChange={handlePriorBorrowerChange}
+                onAddLoan={addPreviousLoan}
+                onDeleteLoan={deleteLoan}
+                onViewLoan={viewPreviousLoan}
+                newLoanId={newLoanId}
+                setNewLoanId={setNewLoanId}
+                loanIdError={loanIdError}
+                deleteConfirm={deleteConfirm}
             />
 
             {/* S8: Credit Signals */}
             <CreditSection
                 isOpen={sections.credit}
                 onToggle={() => toggleSection('credit')}
-                formData={formData}
+                formData={formData.credit}
                 handleChange={(field, value) => handleChange('credit', field, value)}
             />
 

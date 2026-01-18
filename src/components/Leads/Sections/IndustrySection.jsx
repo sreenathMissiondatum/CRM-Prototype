@@ -16,24 +16,20 @@ const IndustrySection = ({
             <div className="space-y-4">
                 <NAICSSelector
                     value={formData.naicsCode}
-                    onChange={(code, desc) => {
-                        // This component uses a specific signature in CreateLead, adapting here logic
-                        // If reusing CreateLead logic:
+                    onSelect={(data) => {
                         if (handleChange) {
-                            handleChange('naicsCode', code);
-                            handleChange('naicsDescription', desc);
-                            handleChange('sector', 'Derived Sector');
+                            handleChange('naicsCode', data.naicsCode);
+                            handleChange('naicsDescription', data.naicsTitle);
+                            handleChange('sector', data.parentCategory || 'Unknown Sector');
                         }
                     }}
                 />
-                <div className="grid grid-cols-2 gap-4">
-                    <Field label="Physical Address" value={formData.address} onChange={v => handleChange('address', v)} />
-                    <div className="grid grid-cols-3 gap-2">
-                        <Field label="City" value={formData.city} onChange={v => handleChange('city', v)} />
-                        <Field label="State" value={formData.state} onChange={v => handleChange('state', v)} />
-                        <Field label="ZIP" value={formData.zip} onChange={v => handleChange('zip', v)} />
-                    </div>
-                </div>
+                <Field
+                    label="NAICS Industry Sector"
+                    value={formData.sector}
+                    readOnly={true}
+                    className="bg-slate-50 text-slate-500"
+                />
             </div>
         </Section>
     );

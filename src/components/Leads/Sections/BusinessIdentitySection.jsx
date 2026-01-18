@@ -3,6 +3,7 @@ import { Building2 } from 'lucide-react';
 import Section from '../../Shared/Section';
 import Field from '../../Shared/Field';
 import SecureEINInput from '../../Shared/SecureEINInput';
+import { getLowIncomeBadge } from '../../../utils/censusUtils';
 
 const BusinessIdentitySection = ({
     isOpen,
@@ -24,6 +25,32 @@ const BusinessIdentitySection = ({
                     value={formData.dbaName}
                     onChange={v => handleChange('dbaName', v)}
                 />
+
+                <div className="grid grid-cols-2 gap-4">
+                    <Field label="Physical Address" value={formData.address} onChange={v => handleChange('address', v)} />
+                    <Field label="Business Website" value={formData.website} onChange={v => handleChange('website', v)} />
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                    <Field label="City" value={formData.city} onChange={v => handleChange('city', v)} />
+                    <Field label="State" value={formData.state} onChange={v => handleChange('state', v)} />
+                    <Field label="ZIP" value={formData.zip} onChange={v => handleChange('zip', v)} />
+                </div>
+
+                {/* Census Data (Derived) */}
+                <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    <Field
+                        label="Census Tract"
+                        value={formData.censusTract || 'N/A'}
+                        readOnly
+                        className="bg-white"
+                    />
+                    <div className="space-y-1.5">
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide">Target Market Status</label>
+                        <div className={`text-sm px-3 py-2 rounded-lg border font-medium ${getLowIncomeBadge(formData.isLowIncome).color}`}>
+                            {getLowIncomeBadge(formData.isLowIncome).label}
+                        </div>
+                    </div>
+                </div>
 
                 <div className="grid grid-cols-4 gap-6">
                     <div className="space-y-1.5">
