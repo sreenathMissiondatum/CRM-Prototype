@@ -338,34 +338,18 @@ const LeadDetailsTab = ({ lead, readOnly }) => {
                 auditLog("PRIMARY_OWNER_CHANGED");
             }
 
-            // --- Household Dissolution Logic ---
+            // --- Household Dissolution Logic (Rule H8) ---
             let finalOwnership = remainingOwners;
 
-            if (ownerToDelete && ownerToDelete.isCommonHb) {
-                const newTotalOwners = remainingOwners.length;
-                const newCheckedCount = remainingOwners.filter(o => o.isCommonHb).length;
-
-                // Case: 0 Owners (Clear all - handled by empty array)
-                // Case: 1 Owner, 1 Checked (Valid Single-Person) -> No action needed, preserves inputs.
-
-                // Case: Multi-owner Invalid (Total >= 2 BUT Checked < 2)
-                if (newTotalOwners >= 2 && newCheckedCount < 2) {
-                    // Start Dissolution
-                    finalOwnership = remainingOwners.map(o => ({
-                        ...o,
-                        isCommonHb: false
-                    }));
-                    auditLog("COMMON_HOUSEHOLD_DISSOLVED");
-                    setToastMessage("Household dissolved due to insufficient members.");
-                    setTimeout(() => setToastMessage(null), 4000);
-                } else if (newTotalOwners === 1) {
-                    // Revert to Implicit Single Household
-                    // Clear checkbox state for cleanliness, though logic ignores it
+            if (remainingOwners.length === 1) {
+                // H1/H8 Enforcement: If only 1 owner remains, they strictly cannot be a household
+                if (remainingOwners[0].isCommonHb) {
                     finalOwnership = remainingOwners.map(o => ({ ...o, isCommonHb: false }));
-                    // No Toast needed, just seamless transition
-                    auditLog("HOUSEHOLD_REVERTED_TO_IMPLICIT");
+                    // auditLog("HOUSEHOLD_REVERTED_TO_IMPLICIT"); // Optional
                 }
             }
+            // Note: If remaining >= 2 but group drops to 1 member, we leave isCommonHb=true 
+            // to allow Rule H2 (Prompt) validation state. We rely on getHouseholdGroups to render correct View.
 
             return {
                 ...prev,
@@ -393,8 +377,12 @@ const LeadDetailsTab = ({ lead, readOnly }) => {
 
                 // Logic: Common Household Toggle
                 if (field === 'isCommonHb') {
-                    // Checkbox should be functionally ignored if totalOwners == 1 (though UI should hide it)
-                    if (prev.ownership.length === 1) return o;
+                    // Rule H1: Block logic if only 1 owner total
+                    if (prev.ownership.length === 1) {
+                        setToastMessage("At least two owners are required to form a 'Household'.");
+                        setTimeout(() => setToastMessage(null), 3500);
+                        return o; // Block change
+                    }
 
                     // Logging
                     if (value === true) auditLog("COMMON_HOUSEHOLD_SELECTED");
@@ -746,11 +734,10 @@ const LeadDetailsTab = ({ lead, readOnly }) => {
     // --- Dynamic Household Grouping ---
     const getHouseholdGroups = () => {
         const groups = [];
-
-        // 1. Household Group (Aggregated)
-        // Includes ANY owner with isCommonHb = true
         const householdOwners = formData.ownership.filter(o => o.isCommonHb);
-        if (householdOwners.length > 0) {
+
+        // Rule H3/H6: Strict >= 2 rule for 'Household' Group
+        if (householdOwners.length >= 2) {
             groups.push({
                 id: 'household-group',
                 type: 'Household',
@@ -759,9 +746,14 @@ const LeadDetailsTab = ({ lead, readOnly }) => {
             });
         }
 
-        // 2. Individual Groups (Separate)
-        // Includes ANY owner with isCommonHb = false
-        const individualOwners = formData.ownership.filter(o => !o.isCommonHb);
+        // Rule H4/H5: Everyone else is 'Individual'
+        // This includes: explicitly unchecked owners AND 'orphan' checked owners (if count < 2)
+        const individualOwners = formData.ownership.filter(o => {
+            if (!o.isCommonHb) return true; // Unchecked
+            if (householdOwners.length < 2) return true; // Checked but Orphan (H2 State)
+            return false; // Valid Household Member
+        });
+
         individualOwners.forEach(owner => {
             groups.push({
                 id: `individual-${owner.id}`,

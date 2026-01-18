@@ -369,14 +369,21 @@ const ContactsSection = ({
                                                         readOnly={readOnly}
                                                     />
                                                 </td>
-                                                <td className="px-4 py-2 text-center">
+                                                <td className="px-4 py-2 text-center group relative">
                                                     <input
                                                         type="checkbox"
                                                         checked={owner.isCommonHb}
                                                         onChange={(e) => onUpdateOwner(owner.id, 'isCommonHb', e.target.checked)}
-                                                        className="w-4 h-4 text-blue-600 rounded cursor-pointer"
+                                                        className={`w-4 h-4 rounded cursor-pointer ${owner.isCommonHb && ownership.filter(o => o.isCommonHb).length === 1 && ownership.length >= 2 ? 'ring-2 ring-amber-400 text-amber-500' : 'text-blue-600'}`}
                                                         disabled={readOnly}
                                                     />
+                                                    {/* Rule H2: Inline Prompt */}
+                                                    {owner.isCommonHb && ownership.filter(o => o.isCommonHb).length === 1 && ownership.length >= 2 && (
+                                                        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 w-max z-20 bg-amber-50 text-amber-700 text-[10px] font-bold px-2 py-1 rounded border border-amber-200 shadow-md flex items-center gap-1">
+                                                            <AlertCircle size={10} />
+                                                            Select one more to group
+                                                        </div>
+                                                    )}
                                                 </td>
                                                 <td className="px-4 py-2 text-center">
                                                     <input
@@ -470,26 +477,37 @@ const ContactsSection = ({
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-100 bg-white">
-                                            {ownership.map(owner => (
-                                                <tr key={owner.id} className="hover:bg-slate-50/50">
-                                                    <td className="px-4 py-2 font-medium text-slate-700">{owner.firstName} {owner.lastName}</td>
-                                                    <td className="px-4 py-2 text-right font-mono text-slate-600">${(parseFloat(owner.incGros_hhd) || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
-                                                    <td className="px-4 py-2 text-right font-mono text-slate-600">${(parseFloat(owner.netWorth_hhd) || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
-                                                    <td className="px-4 py-2 text-right font-mono text-slate-600">${(parseFloat(owner.amtExistLoans_hhd) || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
-                                                    <td className="px-4 py-2 text-right font-mono text-slate-600">${(parseFloat(owner.dServExistLoans_mo_hhd) || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
-                                                </tr>
-                                            ))}
+                                            {householdGroups.filter(g => g.type === 'Individual').map(group => {
+                                                const owner = group.owners[0];
+                                                return (
+                                                    <tr key={owner.id} className="hover:bg-slate-50/50">
+                                                        <td className="px-4 py-2 font-medium text-slate-700">{owner.firstName} {owner.lastName}</td>
+                                                        <td className="px-4 py-2 text-right font-mono text-slate-600">${(parseFloat(owner.incGros_hhd) || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+                                                        <td className="px-4 py-2 text-right font-mono text-slate-600">${(parseFloat(owner.netWorth_hhd) || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+                                                        <td className="px-4 py-2 text-right font-mono text-slate-600">${(parseFloat(owner.amtExistLoans_hhd) || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+                                                        <td className="px-4 py-2 text-right font-mono text-slate-600">${(parseFloat(owner.dServExistLoans_mo_hhd) || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+                                                    </tr>
+                                                );
+                                            })}
+                                            {householdGroups.filter(g => g.type === 'Individual').length === 0 && householdGroups.some(g => g.type === 'Household') && (
+                                                <tr><td colSpan="5" className="px-4 py-2 text-center text-slate-400 italic">All owners are grouped in households.</td></tr>
+                                            )}
                                             {ownership.length === 0 && <tr><td colSpan="5" className="px-4 py-2 text-center text-slate-400 italic">No owners.</td></tr>}
                                         </tbody>
                                         {/* Total Summary Row */}
                                         <tfoot className="bg-slate-50 border-t border-slate-200 font-bold text-slate-700">
-                                            <tr>
-                                                <td className="px-4 py-2">Total (All Owners)</td>
-                                                <td className="px-4 py-2 text-right font-mono">${ownership.reduce((sum, o) => sum + (parseFloat(o.incGros_hhd) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
-                                                <td className="px-4 py-2 text-right font-mono">${ownership.reduce((sum, o) => sum + (parseFloat(o.netWorth_hhd) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
-                                                <td className="px-4 py-2 text-right font-mono">${ownership.reduce((sum, o) => sum + (parseFloat(o.amtExistLoans_hhd) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
-                                                <td className="px-4 py-2 text-right font-mono">${ownership.reduce((sum, o) => sum + (parseFloat(o.dServExistLoans_mo_hhd) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
-                                            </tr>
+                                            {(() => {
+                                                const individualOwners = householdGroups.filter(g => g.type === 'Individual').map(g => g.owners[0]);
+                                                return (
+                                                    <tr>
+                                                        <td className="px-4 py-2">Total (Individuals Only)</td>
+                                                        <td className="px-4 py-2 text-right font-mono">${individualOwners.reduce((sum, o) => sum + (parseFloat(o.incGros_hhd) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+                                                        <td className="px-4 py-2 text-right font-mono">${individualOwners.reduce((sum, o) => sum + (parseFloat(o.netWorth_hhd) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+                                                        <td className="px-4 py-2 text-right font-mono">${individualOwners.reduce((sum, o) => sum + (parseFloat(o.amtExistLoans_hhd) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+                                                        <td className="px-4 py-2 text-right font-mono">${individualOwners.reduce((sum, o) => sum + (parseFloat(o.dServExistLoans_mo_hhd) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+                                                    </tr>
+                                                );
+                                            })()}
                                         </tfoot>
                                     </table>
                                 </div>
