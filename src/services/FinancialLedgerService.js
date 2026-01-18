@@ -27,6 +27,47 @@ let fin_statements = [
     }
 ];
 
+// [NEW] Personal Financial Profile Mock (Strictly Read-Only)
+let finProfile_pers = {
+    // Statement Meta
+    ID_contX: 'C-101',
+    statementPeriod_sp1: 'SP-2024-Q1',
+    name_period_sp1_cont1: '2024 Annual Layout',
+    startDt_sp1_cont1: '2024-01-01',
+    endDt_sp1_cont1: '2024-12-31',
+    type_source_sp1_cont1: 'Tax Return', // Verified
+    status_sp1_cont1: 'Locked',
+
+    // 1. Personal Income
+    salaryW2_sp1_cont1: 155000,
+    inc_distribK1_sp1_cont1: 45000,
+    inc_rentNet_sp1_cont1: 12000,
+    inc_invest_sp1_cont1: 5400,
+    inc_spouse_sp1_cont1: 0,
+    incGros_hhd_sp1_cont1: 217400, // Sum
+
+    // 2. Recurring Expenses
+    exp_house_sp1_cont1: 32000, // Annualized
+    exp_living_sp1_cont1: 42000,
+    Living_Expense_Method_sp1_cont1: 'Actual (Stated)',
+    dbtService_sp1_cont1: 14500,
+    ofile_sp1_cont1: 0, // Other Obligations
+    expTot_hhd_sp1_cont1: 88500, // Sum
+
+    // 3. Cash Flow
+    cfTot_hhd_sp1_cont1: 128900, // Net Discretionary
+
+    // 4. Assets & Net Worth
+    liquidAssets_hhd_sp1_cont1: 145000,
+    netWorth_hhd_sp1_cont1: 1250000,
+
+    // 5. Credit Profile (Sensitive)
+    crbScore_sp1_cont1: 742,
+    crbScore_range_sp1_cont1: '720-760',
+    crbScore_date_sp1_cont1: '2024-03-15',
+    crbScore_consentTime_sp1_cont1: '2024-01-10T09:30:00Z'
+};
+
 // PROMPT-DEFINED CANONICAL CATEGORIES
 const CANONICAL_CATEGORIES = [
     // INCOME STATEMENT
@@ -183,9 +224,15 @@ export const FinancialLedgerService = {
 
     // --- READ ---
 
-    getStatement: (id) => {
-        return fin_statements.find(s => s.ID_finStmnt_rp1 === id);
+    // [NEW] Personal Intelligence Read
+    getPersonalProfile: (contactId) => {
+        // In a real app, filtering by contactId would happen here.
+        // For prototype, we return the single mock.
+        return { ...finProfile_pers };
     },
+
+    // 1. Get Statement Metadata (Header)
+    getStatement: (id) => fin_statements.find(s => s.ID_finStmnt_rp1 === id),
 
     getStatementItems: (statementId) => {
         return fin_items.filter(i => i.ID_finStmnt_rp1 === statementId);

@@ -7,7 +7,8 @@ import {
     MoreVertical, History, Trash2, Ban, Wallet, FileText, Activity, StickyNote
 } from 'lucide-react';
 import ContactFormDrawer from './ContactFormDrawer';
-import ContactFinancialsTab from './Tabs/ContactFinancialsTab';
+import PersonalFinancialIntelligence from './PersonalFinancialIntelligence';
+// import ContactFinancialsTab from './Tabs/ContactFinancialsTab'; // [REPLACED]
 
 // --- Sub-Component: Contact Overview (Original Content) ---
 const ContactOverview = ({ contact, isBorrower, otherContacts, onEditCurrent, handleCreateContact, handleEditOther, handlePromoteToPrimary, setSelectedId }) => {
@@ -493,6 +494,10 @@ const ContactDetail = ({ onBack, initialContactName }) => {
                     </div>
                 </div>
 
+
+
+
+
                 {/* --- Tabs Navigation --- */}
                 <div className="flex items-center gap-6 px-8 mt-1 border-t border-slate-100">
                     <button
@@ -502,16 +507,17 @@ const ContactDetail = ({ onBack, initialContactName }) => {
                         <User size={16} /> Overview
                     </button>
 
-                    {/* Financials Tab (Conditional) */}
+                    {/* Financial Intelligence Tab (Conditional) */}
                     {canHaveFinancials && (
                         <button
                             onClick={() => setActiveTab('financials')}
                             className={`py-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'financials' ? 'text-blue-600 border-blue-600' : 'text-slate-500 border-transparent hover:text-slate-700 hover:border-slate-200'}`}
                         >
-                            <Wallet size={16} /> Financials
+                            <Wallet size={16} /> Financial Intelligence
                         </button>
                     )}
 
+                    {/* Other Tabs */}
                     <button
                         onClick={() => setActiveTab('documents')}
                         className={`py-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'documents' ? 'text-blue-600 border-blue-600' : 'text-slate-500 border-transparent hover:text-slate-700 hover:border-slate-200'}`}
@@ -523,18 +529,6 @@ const ContactDetail = ({ onBack, initialContactName }) => {
                         className={`py-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'activities' ? 'text-blue-600 border-blue-600' : 'text-slate-500 border-transparent hover:text-slate-700 hover:border-slate-200'}`}
                     >
                         <Activity size={16} /> Activities
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('audit')}
-                        className={`py-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'audit' ? 'text-blue-600 border-blue-600' : 'text-slate-500 border-transparent hover:text-slate-700 hover:border-slate-200'}`}
-                    >
-                        <History size={16} /> Audit History
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('notes')}
-                        className={`py-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'notes' ? 'text-blue-600 border-blue-600' : 'text-slate-500 border-transparent hover:text-slate-700 hover:border-slate-200'}`}
-                    >
-                        <StickyNote size={16} /> Notes
                     </button>
                 </div>
             </header>
@@ -556,7 +550,8 @@ const ContactDetail = ({ onBack, initialContactName }) => {
                     )}
 
                     {activeTab === 'financials' && canHaveFinancials && (
-                        <ContactFinancialsTab contact={contact} />
+                        // [NEW] Personal Financial Intelligence
+                        <PersonalFinancialIntelligence contactId={contact.id} />
                     )}
 
                     {!['overview', 'financials'].includes(activeTab) && (
