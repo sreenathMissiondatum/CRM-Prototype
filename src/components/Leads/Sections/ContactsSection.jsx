@@ -316,52 +316,7 @@ const ContactsSection = ({
                             )}
                         </div>
 
-                        {/* --- Household Financial Summaries (New) --- */}
-                        {householdGroups.length > 0 && (
-                            <div className="mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {householdGroups.map(group => {
-                                    const totalInc = group.owners.reduce((sum, o) => sum + (parseFloat(o.incGros_hhd) || 0), 0);
-                                    const totalNet = group.owners.reduce((sum, o) => sum + (parseFloat(o.netWorth_hhd) || 0), 0);
-                                    const totalDebt = group.owners.reduce((sum, o) => sum + (parseFloat(o.amtExistLoans_hhd) || 0), 0);
-                                    const totalDS = group.owners.reduce((sum, o) => sum + (parseFloat(o.dServExistLoans_mo_hhd) || 0), 0);
 
-                                    return (
-                                        <div key={group.id} className="bg-slate-50 border border-slate-200 rounded-lg p-3 shadow-sm">
-                                            <div className="flex justify-between items-start mb-2 border-b border-slate-200 pb-2">
-                                                <div>
-                                                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
-                                                        {group.type === 'Household' ? 'Household Group' : 'Individual'}
-                                                    </div>
-                                                    <div className="text-sm font-bold text-slate-800 truncate max-w-[180px]" title={group.label}>
-                                                        {group.label}
-                                                    </div>
-                                                </div>
-                                                {group.type === 'Household' && <Users size={14} className="text-blue-500 mt-1" />}
-                                            </div>
-
-                                            <div className="space-y-1.5">
-                                                <div className="flex justify-between text-xs">
-                                                    <span className="text-slate-500">Gross Income</span>
-                                                    <span className="font-mono font-medium text-slate-700">${totalInc.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
-                                                </div>
-                                                <div className="flex justify-between text-xs">
-                                                    <span className="text-slate-500">Net Worth</span>
-                                                    <span className="font-mono font-medium text-slate-700">${totalNet.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
-                                                </div>
-                                                <div className="flex justify-between text-xs">
-                                                    <span className="text-slate-500">Exist. Loans</span>
-                                                    <span className="font-mono font-medium text-slate-700">${totalDebt.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
-                                                </div>
-                                                <div className="flex justify-between text-xs">
-                                                    <span className="text-slate-500">Mo. Debt Svc</span>
-                                                    <span className="font-mono font-medium text-slate-700">${totalDS.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
 
                         <div className="overflow-hidden border border-slate-200 rounded-lg shadow-sm">
                             <table className="w-full text-sm text-left">
@@ -495,6 +450,90 @@ const ContactsSection = ({
                                     ))}
                                 </tbody>
                             </table>
+                        </div>
+
+                        {/* --- Financial Summary Section (New Layout) --- */}
+                        <div className="space-y-6 mt-6 pt-6 border-t border-slate-200">
+
+                            {/* Individual Summary */}
+                            <div>
+                                <h4 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-3">Individual Financial Summary</h4>
+                                <div className="overflow-hidden border border-slate-200 rounded-lg shadow-sm">
+                                    <table className="w-full text-xs text-left">
+                                        <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                                            <tr>
+                                                <th className="px-4 py-2">Owner Name</th>
+                                                <th className="px-4 py-2 text-right">Gross Income</th>
+                                                <th className="px-4 py-2 text-right">Net Worth</th>
+                                                <th className="px-4 py-2 text-right">Exist. Loans</th>
+                                                <th className="px-4 py-2 text-right">Mo. Debt Service</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100 bg-white">
+                                            {ownership.map(owner => (
+                                                <tr key={owner.id} className="hover:bg-slate-50/50">
+                                                    <td className="px-4 py-2 font-medium text-slate-700">{owner.firstName} {owner.lastName}</td>
+                                                    <td className="px-4 py-2 text-right font-mono text-slate-600">${(parseFloat(owner.incGros_hhd) || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+                                                    <td className="px-4 py-2 text-right font-mono text-slate-600">${(parseFloat(owner.netWorth_hhd) || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+                                                    <td className="px-4 py-2 text-right font-mono text-slate-600">${(parseFloat(owner.amtExistLoans_hhd) || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+                                                    <td className="px-4 py-2 text-right font-mono text-slate-600">${(parseFloat(owner.dServExistLoans_mo_hhd) || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+                                                </tr>
+                                            ))}
+                                            {ownership.length === 0 && <tr><td colSpan="5" className="px-4 py-2 text-center text-slate-400 italic">No owners.</td></tr>}
+                                        </tbody>
+                                        {/* Total Summary Row */}
+                                        <tfoot className="bg-slate-50 border-t border-slate-200 font-bold text-slate-700">
+                                            <tr>
+                                                <td className="px-4 py-2">Total (All Owners)</td>
+                                                <td className="px-4 py-2 text-right font-mono">${ownership.reduce((sum, o) => sum + (parseFloat(o.incGros_hhd) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+                                                <td className="px-4 py-2 text-right font-mono">${ownership.reduce((sum, o) => sum + (parseFloat(o.netWorth_hhd) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+                                                <td className="px-4 py-2 text-right font-mono">${ownership.reduce((sum, o) => sum + (parseFloat(o.amtExistLoans_hhd) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+                                                <td className="px-4 py-2 text-right font-mono">${ownership.reduce((sum, o) => sum + (parseFloat(o.dServExistLoans_mo_hhd) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+
+                            {/* Household Summary (Conditional) */}
+                            {householdGroups.some(g => g.type === 'Household') && (
+                                <div>
+                                    <h4 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-3 flex items-center gap-2">
+                                        <Users size={16} className="text-blue-500" /> Household Financial Summary
+                                    </h4>
+                                    <div className="overflow-hidden border border-slate-200 rounded-lg shadow-sm">
+                                        <table className="w-full text-xs text-left">
+                                            <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                                                <tr>
+                                                    <th className="px-4 py-2">Household Group</th>
+                                                    <th className="px-4 py-2 text-right">Total Income</th>
+                                                    <th className="px-4 py-2 text-right">Total Net Worth</th>
+                                                    <th className="px-4 py-2 text-right">Total Exist. Loans</th>
+                                                    <th className="px-4 py-2 text-right">Total Debt Service</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100 bg-white">
+                                                {householdGroups.filter(g => g.type === 'Household').map(group => {
+                                                    const totalInc = group.owners.reduce((sum, o) => sum + (parseFloat(o.incGros_hhd) || 0), 0);
+                                                    const totalNet = group.owners.reduce((sum, o) => sum + (parseFloat(o.netWorth_hhd) || 0), 0);
+                                                    const totalDebt = group.owners.reduce((sum, o) => sum + (parseFloat(o.amtExistLoans_hhd) || 0), 0);
+                                                    const totalDS = group.owners.reduce((sum, o) => sum + (parseFloat(o.dServExistLoans_mo_hhd) || 0), 0);
+                                                    return (
+                                                        <tr key={group.id} className="hover:bg-slate-50/50">
+                                                            <td className="px-4 py-2 font-medium text-slate-700">{group.label}</td>
+                                                            <td className="px-4 py-2 text-right font-mono text-slate-600">${totalInc.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+                                                            <td className="px-4 py-2 text-right font-mono text-slate-600">${totalNet.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+                                                            <td className="px-4 py-2 text-right font-mono text-slate-600">${totalDebt.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+                                                            <td className="px-4 py-2 text-right font-mono text-slate-600">${totalDS.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
                         </div>
                     </div>
                 )}

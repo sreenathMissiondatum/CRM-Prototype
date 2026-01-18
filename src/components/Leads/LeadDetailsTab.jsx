@@ -106,7 +106,8 @@ const LeadDetailsTab = ({ lead, readOnly }) => {
                 website: 'www.jenkinscatering.com', // Consolidated here
                 // Census Data (Moved from Industry)
                 censusTract: '48201223100', // Initial Mock
-                isLowIncome: true
+                isLowIncome: true,
+                additionalAddresses: []
             },
             // S3: Ownership & Contacts
             ownership: initialOwnership.length > 0 ? initialOwnership : [
