@@ -12,6 +12,7 @@ import AccountLoansTab from './AccountLoansTab';
 import AccountContactsTab from './AccountContactsTab';
 import AccountFinancialsTab from './AccountFinancialsTab';
 import FinancialIntelligence from './FinancialIntelligence'; // [NEW] Intelligence View
+import NormalizationWorkbench from '../FinancialLedger/NormalizationWorkbench'; // [NEW] Ledger View
 
 
 
@@ -91,6 +92,7 @@ const AccountDetail = ({ onBack, initialAccount, onOpen360 }) => {
         { id: 'leads', label: 'Leads' },
         { id: 'financials', label: 'Financials' },
         { id: 'fin_intelligence', label: 'Financial Intelligence' }, // [NEW]
+        // { id: 'ledger', label: 'Ledger (Admin)' }, // [HIDDEN - Strict Transition Only]
         { id: 'loans', label: 'Loans' },
         { id: 'contacts', label: 'Contacts' },
         { id: 'documents', label: 'Documents' },
@@ -335,7 +337,23 @@ const AccountDetail = ({ onBack, initialAccount, onOpen360 }) => {
 
                 {/* [NEW] Financial Intelligence Tab */}
                 {activeTab === 'fin_intelligence' && (
-                    <FinancialIntelligence />
+                    <FinancialIntelligence
+                        accountId={account.taxId}
+                        onEditSource={(context) => {
+                            console.log('Transitioning to Ledger Edit Mode', context);
+                            setActiveTab('ledger');
+                        }}
+                    />
+                )}
+
+                {activeTab === 'ledger' && (
+                    <NormalizationWorkbench
+                        statementId="STM-2024-001"
+                        onClose={() => {
+                            console.log('Returning to Financial Intelligence');
+                            setActiveTab('fin_intelligence');
+                        }}
+                    />
                 )}
 
                 {activeTab === 'loans' && (

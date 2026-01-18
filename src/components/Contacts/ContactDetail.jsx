@@ -4,9 +4,183 @@ import {
     ShieldCheck, Crown, BadgeCheck, ArrowLeft,
     Building2, Users, AlertTriangle, Save, X,
     ChevronRight, ExternalLink, Lock, Pen, Briefcase,
-    MoreVertical, History, Trash2, Ban
+    MoreVertical, History, Trash2, Ban, Wallet, FileText, Activity, StickyNote
 } from 'lucide-react';
 import ContactFormDrawer from './ContactFormDrawer';
+import ContactFinancialsTab from './Tabs/ContactFinancialsTab';
+
+// --- Sub-Component: Contact Overview (Original Content) ---
+const ContactOverview = ({ contact, isBorrower, otherContacts, onEditCurrent, handleCreateContact, handleEditOther, handlePromoteToPrimary, setSelectedId }) => {
+    // Helper Row Components
+    const DetailRow = ({ label, value, sensitive }) => (
+        <div className="flex flex-col gap-1">
+            <div className="text-xs font-bold text-slate-500 uppercase tracking-wide flex items-center gap-1">
+                {label}
+                {sensitive && <Lock size={10} className="text-amber-500" />}
+            </div>
+            <div className={`text-sm font-medium text-slate-800 ${sensitive ? 'blur-[2px] hover:blur-none transition-all cursor-pointer select-none' : ''}`}>
+                {value || <span className="text-slate-300 italic">Not Provided</span>}
+            </div>
+        </div>
+    );
+
+    const Section = ({ title, icon: Icon, children, locked }) => (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden mb-6">
+            <div className="px-6 py-3 border-b border-slate-100 bg-slate-50/30 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <Icon size={16} className="text-slate-400" />
+                    <h3 className="text-xs font-bold text-slate-700 uppercase tracking-widest">{title}</h3>
+                </div>
+                {locked && <Lock size={14} className="text-slate-300" />}
+            </div>
+            <div className="p-6">
+                {children}
+            </div>
+        </div>
+    );
+
+    return (
+        <div className="max-w-[1600px] mx-auto grid grid-cols-12 gap-8 animate-in fade-in duration-300">
+            {/* LEFT COLUMN: CARDS (8 Columns) */}
+            <div className="col-span-12 xl:col-span-8 space-y-2">
+                {/* 1. Contact Info */}
+                <Section title="Contact Information" icon={User}>
+                    <div className="grid grid-cols-2 gap-x-16 gap-y-2">
+                        <DetailRow label="Phone" value={contact.phone} />
+                        <DetailRow label="Email" value={contact.email} />
+                        <DetailRow label="Preferred Method" value={contact.preferredMethod} />
+                        <DetailRow label="Home Address" value={contact.homeAddress ? '**** (Masked)' : 'Not Provided'} sensitive />
+                    </div>
+                </Section>
+
+                {/* 2. Relationship */}
+                <Section title="Account Relationship" icon={Building2}>
+                    <div className="grid grid-cols-2 gap-x-16 gap-y-2">
+                        <DetailRow label="Role" value={contact.title} />
+                        {isBorrower && <DetailRow label="Ownership %" value={`${contact.ownershipPercentage || 0}%`} />}
+                        {isBorrower && <DetailRow label="Industry Experience" value={`${contact.yearsIndustry} yrs`} />}
+                        {isBorrower && <DetailRow label="Ownership Experience" value={`${contact.yearsOwnership} yrs`} />}
+                    </div>
+                </Section>
+
+                {/* 3. Compliance */}
+                {isBorrower && (
+                    <Section title="Demographics & Compliance (Section 1071)" icon={ShieldCheck} locked>
+                        <div className="grid grid-cols-2 gap-x-16 gap-y-2">
+                            <DetailRow label="Race" value={contact.race?.join(', ')} />
+                            <DetailRow label="Ethnicity" value={contact.ethnicity?.join(', ')} />
+                            <DetailRow label="Gender" value={contact.gender} />
+                            <DetailRow label="Veteran Status" value={contact.veteran} />
+                            <div className="col-span-2 pt-2 mt-2 border-t border-slate-50 grid grid-cols-2 gap-x-16">
+                                <DetailRow label="Credit Score" value={contact.creditScore} sensitive />
+                                <DetailRow label="Income Range" value={contact.income} sensitive />
+                            </div>
+                        </div>
+                    </Section>
+                )}
+
+                {isBorrower && contact.otherBusinessOwnership && (
+                    <Section title="Other Business Interests" icon={Briefcase}>
+                        <div className="grid grid-cols-1 gap-y-2">
+                            <DetailRow label="Ownership in other entities" value={`${contact.otherBusPercentage_owner1}%`} />
+                            <div className="mt-2 text-sm text-slate-600 bg-slate-50 p-3 rounded border border-slate-100">
+                                <span className="text-xs font-bold text-slate-400 block mb-1 uppercase">Description</span>
+                                {contact.otherBusDescription_owner1}
+                            </div>
+                        </div>
+                    </Section>
+                )}
+            </div>
+
+            {/* RIGHT COLUMN: SIDEBAR (4 Columns) */}
+            <div className="col-span-12 xl:col-span-4 pl-4 border-l border-slate-200/60">
+                <div className="sticky top-6">
+                    <div className="flex items-center justify-between mb-4 px-1">
+                        <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
+                            Other Contacts
+                        </h3>
+                        <button
+                            onClick={handleCreateContact}
+                            className="text-xs font-bold text-blue-600 hover:text-blue-700 uppercase tracking-wide flex items-center gap-1"
+                        >
+                            <Users size={14} /> Add New
+                        </button>
+                    </div>
+
+                    <div className="space-y-3">
+                        {otherContacts.map(oc => (
+                            <div
+                                key={oc.id}
+                                onClick={() => setSelectedId(oc.id)}
+                                className="group p-4 bg-white hover:bg-blue-50/50 border border-slate-200 hover:border-blue-200 rounded-xl shadow-sm transition-all cursor-pointer relative"
+                            >
+                                <div className="flex justify-between items-start mb-1">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs font-bold group-hover:bg-white group-hover:text-blue-600 transition-colors overflow-hidden">
+                                            {oc.avatar ? (
+                                                <img src={oc.avatar} alt={oc.firstName} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <>{oc.firstName?.[0]}{oc.lastName?.[0]}</>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <div className="text-sm font-bold text-slate-900 group-hover:text-blue-700 transition-colors">
+                                                {oc.firstName} {oc.lastName}
+                                            </div>
+                                            <div className="text-xs text-slate-500 group-hover:text-blue-500/80">
+                                                {oc.title}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <ChevronRight size={16} className="text-slate-300 group-hover:text-blue-400 group-hover:translate-x-0.5 transition-all" />
+                                </div>
+
+                                <div className="flex flex-wrap gap-2 mt-3">
+                                    <span className="text-[10px] font-medium px-1.5 py-0.5 bg-slate-50 border border-slate-100 rounded text-slate-500">
+                                        {oc.recordType}
+                                    </span>
+                                    {oc.ownershipPercentage > 0 && (
+                                        <span className="text-[10px] font-bold px-1.5 py-0.5 bg-amber-50 border border-amber-100 rounded text-amber-700">
+                                            {oc.ownershipPercentage}% Own
+                                        </span>
+                                    )}
+                                </div>
+
+                                {/* Inline Actions (Show on Hover) */}
+                                <div className="absolute right-2 bottom-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); handleEditOther(oc); }}
+                                        className="p-1.5 bg-white border border-slate-200 rounded shadow-sm hover:text-blue-600 text-slate-400"
+                                        title="Edit"
+                                    >
+                                        <Pen size={12} />
+                                    </button>
+                                    {!oc.isPrimaryContact && (
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handlePromoteToPrimary(oc.id); }}
+                                            className="p-1.5 bg-white border border-slate-200 rounded shadow-sm hover:text-blue-600 text-slate-400"
+                                            title="Promote to Primary"
+                                        >
+                                            <BadgeCheck size={12} />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+
+                        {otherContacts.length === 0 && (
+                            <div className="p-8 text-center border-2 border-dashed border-slate-100 rounded-xl bg-slate-50/50">
+                                <Users size={24} className="mx-auto text-slate-300 mb-2" />
+                                <p className="text-sm text-slate-500">No other contacts on this account.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 const ContactDetail = ({ onBack, initialContactName }) => {
     // --- Mock Data ---
@@ -170,6 +344,7 @@ const ContactDetail = ({ onBack, initialContactName }) => {
 
     // --- State ---
     const [allContacts, setAllContacts] = useState(initialContacts);
+    const [activeTab, setActiveTab] = useState('overview'); // overview | financials | documents | activities | audit | notes
 
     // Determine initial ID based on prop name match, or default to C-101
     const getInitialId = () => {
@@ -201,6 +376,7 @@ const ContactDetail = ({ onBack, initialContactName }) => {
 
     // --- Logic ---
     const isBorrower = contact.recordType === 'Owner';
+    const canHaveFinancials = ['Owner', 'Guarantor', 'Co-Signer', 'Investor / Donor'].includes(contact.recordType); // Including Investor/Donor for James Carter case
 
     const handleCreateContact = () => {
         setDrawerData(null); // Empty for new
@@ -265,245 +441,131 @@ const ContactDetail = ({ onBack, initialContactName }) => {
         }
     };
 
-    // --- Render Components ---
-    const InfoRow = ({ icon: Icon, label, value }) => (
-        <div className="flex items-start gap-3 py-2 border-b border-slate-50 last:border-0 hover:bg-slate-50 px-2 -mx-2 rounded transition-colors group">
-            <Icon size={16} className="text-slate-400 mt-0.5 group-hover:text-blue-500 transition-colors" />
-            <div>
-                <div className="text-xs text-slate-500 font-medium uppercase tracking-wide mb-0.5">{label}</div>
-                <div className="text-sm font-semibold text-slate-800">{value || <span className="text-slate-300 italic">Not Provided</span>}</div>
-            </div>
-        </div>
-    );
-
-    const AuditRow = ({ label, user, date }) => (
-        <div className="flex flex-col gap-0.5 text-xs text-slate-400">
-            <span className="font-bold uppercase tracking-wider text-[10px] opacity-70">{label}</span>
-            <span>{user} • {date ? new Date(date).toLocaleDateString() : 'N/A'}</span>
-        </div>
-    );
-
-    const DetailRow = ({ label, value, sensitive }) => (
-        <div className="flex flex-col gap-1">
-            <div className="text-xs font-bold text-slate-500 uppercase tracking-wide flex items-center gap-1">
-                {label}
-                {sensitive && <Lock size={10} className="text-amber-500" />}
-            </div>
-            <div className={`text-sm font-medium text-slate-800 ${sensitive ? 'blur-[2px] hover:blur-none transition-all cursor-pointer select-none' : ''}`}>
-                {value || <span className="text-slate-300 italic">Not Provided</span>}
-            </div>
-        </div>
-    );
-
-    const Section = ({ title, icon: Icon, children, locked }) => (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden mb-6">
-            <div className="px-6 py-3 border-b border-slate-100 bg-slate-50/30 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <Icon size={16} className="text-slate-400" />
-                    <h3 className="text-xs font-bold text-slate-700 uppercase tracking-widest">{title}</h3>
-                </div>
-                {locked && <Lock size={14} className="text-slate-300" />}
-            </div>
-            <div className="p-6">
-                {children}
-            </div>
-        </div>
-    );
-
     return (
         <div className="flex flex-col h-full bg-slate-50/50">
             {/* Header */}
-            <header className="bg-white border-b border-slate-200 sticky top-0 z-20 px-8 py-5 flex justify-between items-start shadow-sm">
-                <div>
-                    <button onClick={onBack} className="flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-blue-600 mb-3 transition-colors">
-                        <ArrowLeft size={12} /> Back to Account
-                    </button>
-                    <div className="flex items-center gap-5">
-                        <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-100 to-indigo-50 border-2 border-white shadow-sm flex items-center justify-center text-blue-700 font-bold text-xl overflow-hidden shrink-0">
-                            {contact.avatar ? (
-                                <img src={contact.avatar} alt={contact.firstName} className="w-full h-full object-cover" />
-                            ) : (
-                                <>
-                                    {contact.firstName?.[0]}{contact.lastName?.[0]}
-                                </>
-                            )}
-                        </div>
-                        <div>
-                            <div className="flex items-center gap-3">
-                                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-                                    {contact.firstName} {contact.lastName}
-                                </h1>
-                                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wide
-                                    ${contact.status === 'Active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
-                                    {contact.status}
-                                </span>
+            <header className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm flex flex-col">
+                <div className="px-8 py-5 flex justify-between items-start">
+                    <div>
+                        <button onClick={onBack} className="flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-blue-600 mb-3 transition-colors">
+                            <ArrowLeft size={12} /> Back to Account
+                        </button>
+                        <div className="flex items-center gap-5">
+                            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-100 to-indigo-50 border-2 border-white shadow-sm flex items-center justify-center text-blue-700 font-bold text-xl overflow-hidden shrink-0">
+                                {contact.avatar ? (
+                                    <img src={contact.avatar} alt={contact.firstName} className="w-full h-full object-cover" />
+                                ) : (
+                                    <>
+                                        {contact.firstName?.[0]}{contact.lastName?.[0]}
+                                    </>
+                                )}
                             </div>
-                            <div className="text-sm text-slate-500 flex items-center gap-2 mt-1 font-medium">
-                                {contact.title} <span className="text-slate-300">|</span> {contact.recordType}
-                            </div>
-                            <div className="flex gap-2 mt-2.5">
-                                {contact.isPrimaryOwner && <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-100 flex items-center gap-1"><Crown size={10} /> Owner</span>}
-                                {contact.isPrimaryContact && <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-100 flex items-center gap-1"><BadgeCheck size={10} /> Primary Contact</span>}
+                            <div>
+                                <div className="flex items-center gap-3">
+                                    <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+                                        {contact.firstName} {contact.lastName}
+                                    </h1>
+                                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wide
+                                        ${contact.status === 'Active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                                        {contact.status}
+                                    </span>
+                                </div>
+                                <div className="text-sm text-slate-500 flex items-center gap-2 mt-1 font-medium">
+                                    {contact.title} <span className="text-slate-300">|</span> {contact.recordType}
+                                </div>
+                                <div className="flex gap-2 mt-2.5">
+                                    {contact.isPrimaryOwner && <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-100 flex items-center gap-1"><Crown size={10} /> Owner</span>}
+                                    {contact.isPrimaryContact && <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-100 flex items-center gap-1"><BadgeCheck size={10} /> Primary Contact</span>}
+                                </div>
                             </div>
                         </div>
                     </div>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={handleEditCurrent}
+                            className="px-4 py-2 text-sm font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 active:bg-slate-100 rounded-lg shadow-sm flex items-center gap-2 transition-all"
+                        >
+                            <Pen size={14} /> Edit {contact.firstName}
+                        </button>
+                        <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+                            <MoreVertical size={20} />
+                        </button>
+                    </div>
                 </div>
-                <div className="flex items-center gap-3">
+
+                {/* --- Tabs Navigation --- */}
+                <div className="flex items-center gap-6 px-8 mt-1 border-t border-slate-100">
                     <button
-                        onClick={handleEditCurrent}
-                        className="px-4 py-2 text-sm font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 active:bg-slate-100 rounded-lg shadow-sm flex items-center gap-2 transition-all"
+                        onClick={() => setActiveTab('overview')}
+                        className={`py-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'overview' ? 'text-blue-600 border-blue-600' : 'text-slate-500 border-transparent hover:text-slate-700 hover:border-slate-200'}`}
                     >
-                        <Pen size={14} /> Edit {contact.firstName}
+                        <User size={16} /> Overview
                     </button>
-                    <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
-                        <MoreVertical size={20} />
+
+                    {/* Financials Tab (Conditional) */}
+                    {canHaveFinancials && (
+                        <button
+                            onClick={() => setActiveTab('financials')}
+                            className={`py-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'financials' ? 'text-blue-600 border-blue-600' : 'text-slate-500 border-transparent hover:text-slate-700 hover:border-slate-200'}`}
+                        >
+                            <Wallet size={16} /> Financials
+                        </button>
+                    )}
+
+                    <button
+                        onClick={() => setActiveTab('documents')}
+                        className={`py-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'documents' ? 'text-blue-600 border-blue-600' : 'text-slate-500 border-transparent hover:text-slate-700 hover:border-slate-200'}`}
+                    >
+                        <FileText size={16} /> Documents
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('activities')}
+                        className={`py-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'activities' ? 'text-blue-600 border-blue-600' : 'text-slate-500 border-transparent hover:text-slate-700 hover:border-slate-200'}`}
+                    >
+                        <Activity size={16} /> Activities
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('audit')}
+                        className={`py-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'audit' ? 'text-blue-600 border-blue-600' : 'text-slate-500 border-transparent hover:text-slate-700 hover:border-slate-200'}`}
+                    >
+                        <History size={16} /> Audit History
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('notes')}
+                        className={`py-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'notes' ? 'text-blue-600 border-blue-600' : 'text-slate-500 border-transparent hover:text-slate-700 hover:border-slate-200'}`}
+                    >
+                        <StickyNote size={16} /> Notes
                     </button>
                 </div>
             </header>
 
             {/* Main Content */}
-            <main className="flex-1 overflow-y-auto p-8">
-                <div className="max-w-[1600px] mx-auto grid grid-cols-12 gap-8">
+            <main className="flex-1 overflow-y-auto p-8 bg-slate-50/50">
+                <div className="max-w-[1600px] mx-auto">
+                    {activeTab === 'overview' && (
+                        <ContactOverview
+                            contact={contact}
+                            isBorrower={isBorrower}
+                            otherContacts={otherContacts}
+                            onEditCurrent={handleEditCurrent}
+                            handleCreateContact={handleCreateContact}
+                            handleEditOther={handleEditOther}
+                            handlePromoteToPrimary={handlePromoteToPrimary}
+                            setSelectedId={setSelectedId}
+                        />
+                    )}
 
-                    {/* LEFT COLUMN: CARDS (8 Columns) */}
-                    <div className="col-span-12 xl:col-span-8 space-y-2">
+                    {activeTab === 'financials' && canHaveFinancials && (
+                        <ContactFinancialsTab contact={contact} />
+                    )}
 
-                        {/* 1. Contact Info */}
-                        <Section title="Contact Information" icon={User}>
-                            <div className="grid grid-cols-2 gap-x-16 gap-y-2">
-                                <DetailRow label="Phone" value={contact.phone} />
-                                <DetailRow label="Email" value={contact.email} />
-                                <DetailRow label="Preferred Method" value={contact.preferredMethod} />
-                                <DetailRow label="Home Address" value={contact.homeAddress ? '**** (Masked)' : 'Not Provided'} sensitive />
-                            </div>
-                        </Section>
-
-                        {/* 2. Relationship */}
-                        <Section title="Account Relationship" icon={Building2}>
-                            <div className="grid grid-cols-2 gap-x-16 gap-y-2">
-                                <DetailRow label="Role" value={contact.title} />
-                                {isBorrower && <DetailRow label="Ownership %" value={`${contact.ownershipPercentage || 0}%`} />}
-                                {isBorrower && <DetailRow label="Industry Experience" value={`${contact.yearsIndustry} yrs`} />}
-                                {isBorrower && <DetailRow label="Ownership Experience" value={`${contact.yearsOwnership} yrs`} />}
-                            </div>
-                        </Section>
-
-                        {/* 3. Compliance */}
-                        {isBorrower && (
-                            <Section title="Demographics & Compliance (Section 1071)" icon={ShieldCheck} locked>
-                                <div className="grid grid-cols-2 gap-x-16 gap-y-2">
-                                    <DetailRow label="Race" value={contact.race?.join(', ')} />
-                                    <DetailRow label="Ethnicity" value={contact.ethnicity?.join(', ')} />
-                                    <DetailRow label="Gender" value={contact.gender} />
-                                    <DetailRow label="Veteran Status" value={contact.veteran} />
-                                    <div className="col-span-2 pt-2 mt-2 border-t border-slate-50 grid grid-cols-2 gap-x-16">
-                                        <DetailRow label="Credit Score" value={contact.creditScore} sensitive />
-                                        <DetailRow label="Income Range" value={contact.income} sensitive />
-                                    </div>
-                                </div>
-                            </Section>
-                        )}
-
-                        {isBorrower && contact.otherBusinessOwnership && (
-                            <Section title="Other Business Interests" icon={Briefcase}>
-                                <div className="grid grid-cols-1 gap-y-2">
-                                    <DetailRow label="Ownership in other entities" value={`${contact.otherBusPercentage_owner1}%`} />
-                                    <div className="mt-2 text-sm text-slate-600 bg-slate-50 p-3 rounded border border-slate-100">
-                                        <span className="text-xs font-bold text-slate-400 block mb-1 uppercase">Description</span>
-                                        {contact.otherBusDescription_owner1}
-                                    </div>
-                                </div>
-                            </Section>
-                        )}
-
-                    </div>
-
-                    {/* RIGHT COLUMN: SIDEBAR (4 Columns) */}
-                    <div className="col-span-12 xl:col-span-4 pl-4 border-l border-slate-200/60">
-                        <div className="sticky top-6">
-                            <div className="flex items-center justify-between mb-4 px-1">
-                                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
-                                    Other Contacts
-                                </h3>
-                                <button
-                                    onClick={handleCreateContact}
-                                    className="text-xs font-bold text-blue-600 hover:text-blue-700 uppercase tracking-wide flex items-center gap-1"
-                                >
-                                    <Users size={14} /> Add New
-                                </button>
-                            </div>
-
-                            <div className="space-y-3">
-                                {otherContacts.map(oc => (
-                                    <div
-                                        key={oc.id}
-                                        onClick={() => setSelectedId(oc.id)}
-                                        className="group p-4 bg-white hover:bg-blue-50/50 border border-slate-200 hover:border-blue-200 rounded-xl shadow-sm transition-all cursor-pointer relative"
-                                    >
-                                        <div className="flex justify-between items-start mb-1">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs font-bold group-hover:bg-white group-hover:text-blue-600 transition-colors overflow-hidden">
-                                                    {oc.avatar ? (
-                                                        <img src={oc.avatar} alt={oc.firstName} className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <>{oc.firstName?.[0]}{oc.lastName?.[0]}</>
-                                                    )}
-                                                </div>
-                                                <div>
-                                                    <div className="text-sm font-bold text-slate-900 group-hover:text-blue-700 transition-colors">
-                                                        {oc.firstName} {oc.lastName}
-                                                    </div>
-                                                    <div className="text-xs text-slate-500 group-hover:text-blue-500/80">
-                                                        {oc.title}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <ChevronRight size={16} className="text-slate-300 group-hover:text-blue-400 group-hover:translate-x-0.5 transition-all" />
-                                        </div>
-
-                                        <div className="flex flex-wrap gap-2 mt-3">
-                                            <span className="text-[10px] font-medium px-1.5 py-0.5 bg-slate-50 border border-slate-100 rounded text-slate-500">
-                                                {oc.recordType}
-                                            </span>
-                                            {oc.ownershipPercentage > 0 && (
-                                                <span className="text-[10px] font-bold px-1.5 py-0.5 bg-amber-50 border border-amber-100 rounded text-amber-700">
-                                                    {oc.ownershipPercentage}% Own
-                                                </span>
-                                            )}
-                                        </div>
-
-                                        {/* Inline Actions (Show on Hover) */}
-                                        <div className="absolute right-2 bottom-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); handleEditOther(oc); }}
-                                                className="p-1.5 bg-white border border-slate-200 rounded shadow-sm hover:text-blue-600 text-slate-400"
-                                                title="Edit"
-                                            >
-                                                <Pen size={12} />
-                                            </button>
-                                            {!oc.isPrimaryContact && (
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); handlePromoteToPrimary(oc.id); }}
-                                                    className="p-1.5 bg-white border border-slate-200 rounded shadow-sm hover:text-blue-600 text-slate-400"
-                                                    title="Promote to Primary"
-                                                >
-                                                    <BadgeCheck size={12} />
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-
-                                {otherContacts.length === 0 && (
-                                    <div className="p-8 text-center border-2 border-dashed border-slate-100 rounded-xl bg-slate-50/50">
-                                        <Users size={24} className="mx-auto text-slate-300 mb-2" />
-                                        <p className="text-sm text-slate-500">No other contacts on this account.</p>
-                                    </div>
-                                )}
-                            </div>
+                    {!['overview', 'financials'].includes(activeTab) && (
+                        <div className="flex flex-col items-center justify-center h-64 text-slate-400 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50">
+                            <ConstructionIcon size={48} className="mb-4 text-slate-300" />
+                            <h3 className="text-lg font-bold text-slate-500 mb-1">Coming Soon</h3>
+                            <p className="text-sm">The {activeTab} view is under construction.</p>
                         </div>
-                    </div>
-
+                    )}
                 </div>
             </main>
 
@@ -520,5 +582,19 @@ const ContactDetail = ({ onBack, initialContactName }) => {
         </div>
     );
 };
+
+// Simple placeholder icon for empty states
+const ConstructionIcon = ({ size, className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <rect x="2" y="6" width="20" height="8" rx="1" />
+        <path d="M17 14v7" />
+        <path d="M7 14v7" />
+        <path d="M17 3v3" />
+        <path d="M7 3v3" />
+        <path d="M10 14 2.3 6.3" />
+        <path d="M14 6l7.7 7.7" />
+        <path d="M8 6l8 8" />
+    </svg>
+);
 
 export default ContactDetail;
