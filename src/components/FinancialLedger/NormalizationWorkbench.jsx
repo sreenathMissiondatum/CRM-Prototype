@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
     Table, Save, Lock, AlertTriangle, CheckCircle,
-    ArrowRight, RefreshCw, Layers, ChevronDown, ChevronRight
+    ArrowRight, RefreshCw, Layers, ChevronDown, ChevronRight,
+    Filter, X
 } from 'lucide-react';
 import { FinancialLedgerService, CATEGORY_OPTIONS } from '../../services/FinancialLedgerService';
 
@@ -11,7 +12,9 @@ const NormalizationWorkbench = ({ statementId = 'STM-2024-001', onClose }) => {
     const [checklist, setChecklist] = useState({ total: 0, mapped: 0, percent: 0 });
     const [canonList, setCanonList] = useState([]); // [NEW] Canonical List
     const [notification, setNotification] = useState(null);
-    const [filterStatus, setFilterStatus] = useState('ALL'); // [NEW] Filter State: ALL | MAPPED | UNMAPPED
+    const [filterStatus, setFilterStatus] = useState('ALL');
+    const [checkedCategories, setCheckedCategories] = useState([]); // [NEW] Multi-Select State
+    const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false); // [NEW] UI State
 
     // Initial Load
     useEffect(() => {
@@ -46,7 +49,6 @@ const NormalizationWorkbench = ({ statementId = 'STM-2024-001', onClose }) => {
         try {
             const result = FinancialLedgerService.lockStatement(statementId);
             setNotification({ type: 'success', message: 'Statement Locked & Materialized Successfully!' });
-            console.log("Materialized Profile:", result);
 
             // Wait briefly for user to see success, then close
             setTimeout(() => {
@@ -57,11 +59,25 @@ const NormalizationWorkbench = ({ statementId = 'STM-2024-001', onClose }) => {
         }
     };
 
+    // [NEW] Multi-Select Logic
+    const toggleCategory = (catId) => {
+        setCheckedCategories(prev =>
+            prev.includes(catId)
+                ? prev.filter(c => c !== catId)
+                : [...prev, catId]
+        );
+    };
+
+    const clearCategories = () => {
+        setCheckedCategories([]);
+        setIsCategoryDropdownOpen(false);
+    };
+
     if (!statement) return <div className="p-10 text-center">Loading Ledger...</div>;
 
     const isLocked = statement.status_finStmnt_rp1 === 'Locked';
 
-    // Group Canon List by Main Section
+    // Group Canon List by Main Section (Left Pane)
     const groupedCanon = canonList.reduce((acc, curr) => {
         if (!acc[curr.type]) acc[curr.type] = {};
         if (!acc[curr.type][curr.group]) acc[curr.type][curr.group] = [];
@@ -69,18 +85,49 @@ const NormalizationWorkbench = ({ statementId = 'STM-2024-001', onClose }) => {
         return acc;
     }, {});
 
-    // [NEW] Calculate Counts
+    // Calculate Counts
     const countTotal = items.length;
     const countMapped = items.filter(i => i.Master_Category).length;
     const countUnmapped = countTotal - countMapped;
 
-    // [NEW] Filter Logic
+    // Filter Logic
     const filteredItems = items.filter(item => {
-        if (filterStatus === 'ALL') return true;
-        if (filterStatus === 'MAPPED') return !!item.Master_Category;
-        if (filterStatus === 'UNMAPPED') return !item.Master_Category;
-        return true;
+        let matchStatus = true;
+        if (filterStatus === 'MAPPED') matchStatus = !!item.Master_Category;
+        if (filterStatus === 'UNMAPPED') matchStatus = !item.Master_Category;
+
+        let matchCategory = true;
+        if (checkedCategories.length > 0) {
+            // If item has no category (Unmapped), it shouldn't match a category filter generally,
+            // unless we had an explicit "Unmapped" checkbox. 
+            // For now, if categories are checked, we only show items matching those categories.
+            matchCategory = checkedCategories.includes(item.Master_Category);
+        }
+
+        return matchStatus && matchCategory;
     });
+
+    // [NEW] Grouping for Right Pane (Virtual Sections)
+    // Only used when filters are active
+    const isFilterActive = filterStatus !== 'ALL' || checkedCategories.length > 0;
+
+    const virtualGroups = {};
+    if (isFilterActive) {
+        filteredItems.forEach(item => {
+            const key = item.Master_Category ? item.Master_Category : 'UNMAPPED_GROUP';
+            if (!virtualGroups[key]) {
+                const catInfo = CATEGORY_OPTIONS.find(c => c.id === key);
+                virtualGroups[key] = {
+                    id: key,
+                    label: catInfo ? `${catInfo.group}: ${catInfo.label}` : 'Unmapped Items',
+                    items: [],
+                    total: 0
+                };
+            }
+            virtualGroups[key].items.push(item);
+            virtualGroups[key].total += item.Line_Amount;
+        });
+    }
 
     return (
         <div className="bg-slate-50 min-h-screen p-6 flex flex-col gap-6">
@@ -108,7 +155,7 @@ const NormalizationWorkbench = ({ statementId = 'STM-2024-001', onClose }) => {
             {/* DASHBOARD GRID */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-140px)]">
 
-                {/* LEFT: CANONICAL CHECKLIST */}
+                {/* LEFT: CANONICAL CHECKLIST (STATIC READ-ONLY) */}
                 <div className="lg:col-span-4 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
                     <div className="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
                         <h3 className="font-bold text-slate-700">Canonical Targets (Read-Only)</h3>
@@ -131,7 +178,6 @@ const NormalizationWorkbench = ({ statementId = 'STM-2024-001', onClose }) => {
                                                     <span className={`text-xs ${line.amount > 0 ? 'text-slate-700 font-medium' : 'text-slate-400'}`}>
                                                         {line.label}
                                                     </span>
-                                                    {/*<span className="text-[10px] text-slate-300 font-mono">{line.id}</span>*/}
                                                 </div>
                                                 <div className="text-right">
                                                     <div className={`font-mono text-xs ${line.amount > 0 ? 'text-slate-900 font-bold' : 'text-slate-300'}`}>
@@ -180,38 +226,94 @@ const NormalizationWorkbench = ({ statementId = 'STM-2024-001', onClose }) => {
 
                     {/* ITEM TABLE */}
                     <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex-1 flex flex-col overflow-hidden">
-                        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row justify-between items-center gap-4 relative z-20">
                             <h3 className="font-bold text-slate-700">Raw Ledger Items ({filteredItems.length})</h3>
 
-                            {/* [NEW] STATUS FILTER CONTROL */}
-                            <div className="flex bg-slate-200 rounded-lg p-1">
-                                <button
-                                    onClick={() => setFilterStatus('ALL')}
-                                    className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${filterStatus === 'ALL'
+                            <div className="flex items-center gap-4">
+                                {/* MULTI-SELECT CATEGORY FILTER */}
+                                <div className="relative">
+                                    <button
+                                        onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
+                                        className={`flex items-center gap-2 text-xs py-1.5 px-3 border rounded-md shadow-sm transition-colors ${checkedCategories.length > 0
+                                            ? 'bg-blue-50 border-blue-200 text-blue-700 font-bold'
+                                            : 'bg-white border-slate-300 text-slate-700'
+                                            }`}
+                                    >
+                                        <Filter size={12} />
+                                        {checkedCategories.length > 0
+                                            ? `${checkedCategories.length} Selected`
+                                            : 'Filter Categories'}
+                                    </button>
+
+                                    {isCategoryDropdownOpen && (
+                                        <>
+                                            <div
+                                                className="fixed inset-0 z-40"
+                                                onClick={() => setIsCategoryDropdownOpen(false)}
+                                            />
+                                            <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden flex flex-col max-h-[400px]">
+                                                <div className="p-3 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                                                    <span className="text-xs font-bold text-slate-500 uppercase">Select Categories</span>
+                                                    {checkedCategories.length > 0 && (
+                                                        <button
+                                                            onClick={clearCategories}
+                                                            className="text-[10px] items-center flex gap-1 text-slate-400 hover:text-red-600 font-medium"
+                                                        >
+                                                            <X size={10} /> Clear All
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <div className="overflow-y-auto p-2 space-y-0.5">
+                                                    {CATEGORY_OPTIONS.map(opt => (
+                                                        <label key={opt.id} className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50 rounded cursor-pointer group">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={checkedCategories.includes(opt.id)}
+                                                                onChange={() => toggleCategory(opt.id)}
+                                                                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                                            />
+                                                            <div className="flex flex-col">
+                                                                <span className="text-xs font-medium text-slate-700 group-hover:text-slate-900">{opt.label}</span>
+                                                                <span className="text-[10px] text-slate-400">{opt.group}</span>
+                                                            </div>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+
+                                {/* STATUS FILTER CONTROL */}
+                                <div className="flex bg-slate-200 rounded-lg p-1">
+                                    <button
+                                        onClick={() => setFilterStatus('ALL')}
+                                        className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${filterStatus === 'ALL'
                                             ? 'bg-white text-slate-800 shadow-sm'
                                             : 'text-slate-500 hover:text-slate-700'
-                                        }`}
-                                >
-                                    ALL ({countTotal})
-                                </button>
-                                <button
-                                    onClick={() => setFilterStatus('MAPPED')}
-                                    className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${filterStatus === 'MAPPED'
+                                            }`}
+                                    >
+                                        ALL ({countTotal})
+                                    </button>
+                                    <button
+                                        onClick={() => setFilterStatus('MAPPED')}
+                                        className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${filterStatus === 'MAPPED'
                                             ? 'bg-white text-blue-700 shadow-sm'
                                             : 'text-slate-500 hover:text-slate-700'
-                                        }`}
-                                >
-                                    MAPPED ({countMapped})
-                                </button>
-                                <button
-                                    onClick={() => setFilterStatus('UNMAPPED')}
-                                    className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${filterStatus === 'UNMAPPED'
+                                            }`}
+                                    >
+                                        MAPPED ({countMapped})
+                                    </button>
+                                    <button
+                                        onClick={() => setFilterStatus('UNMAPPED')}
+                                        className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${filterStatus === 'UNMAPPED'
                                             ? 'bg-white text-red-700 shadow-sm'
                                             : 'text-slate-500 hover:text-slate-700'
-                                        }`}
-                                >
-                                    UNMAPPED ({countUnmapped})
-                                </button>
+                                            }`}
+                                    >
+                                        UNMAPPED ({countUnmapped})
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         <div className="flex-1 overflow-y-auto">
@@ -225,41 +327,105 @@ const NormalizationWorkbench = ({ statementId = 'STM-2024-001', onClose }) => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
-                                    {filteredItems.map(item => (
-                                        <tr key={item.ID_finItem} className="hover:bg-slate-50 transition-colors">
-                                            <td className="px-6 py-3 font-medium text-slate-700 max-w-[200px] truncate" title={item.Raw_Line_Name}>
-                                                {item.Raw_Line_Name}
-                                            </td>
-                                            <td className="px-6 py-3 text-right font-mono text-slate-600">${item.Line_Amount.toLocaleString()}</td>
-                                            <td className="px-6 py-3">
-                                                <select
-                                                    value={item.Master_Category || ''}
-                                                    onChange={(e) => handleMappingChange(item.ID_finItem, e.target.value)}
-                                                    disabled={isLocked}
-                                                    className={`w-full text-xs py-1.5 border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500 ${!item.Master_Category ? 'bg-red-50 text-red-700 border-red-200 font-bold' : 'bg-white'
-                                                        } ${isLocked ? 'bg-slate-50 text-slate-400 cursor-not-allowed' : ''}`}
-                                                >
-                                                    <option value="">-- [REQUIRED] Select Target --</option>
-                                                    {CATEGORY_OPTIONS.map(opt => (
-                                                        <option key={opt.id} value={opt.id}>
-                                                            {opt.group}: {opt.label}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            </td>
-                                            <td className="px-6 py-3 text-right">
-                                                {item.Master_Category ? (
-                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                                                        MAPPED
-                                                    </span>
-                                                ) : (
-                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 uppercase">
-                                                        Unmapped
-                                                    </span>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    {isFilterActive ? (
+                                        // VIRTUAL SECTION VIEW
+                                        Object.values(virtualGroups).map(group => (
+                                            <React.Fragment key={group.id}>
+                                                {/* VIRTUAL HEADER */}
+                                                <tr className="bg-blue-50/50">
+                                                    <td colSpan="4" className="px-6 py-2 border-y border-blue-100">
+                                                        <div className="flex justify-between items-center">
+                                                            <div className="flex items-center gap-2">
+                                                                <Layers size={14} className="text-blue-500" />
+                                                                <span className="text-xs font-bold text-blue-700 uppercase tracking-wide">
+                                                                    {group.label}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">Visible Section Total:</span>
+                                                                <span className="font-mono text-sm font-bold text-blue-700">
+                                                                    ${group.total.toLocaleString()}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                {/* GROUP ITEMS */}
+                                                {group.items.map(item => (
+                                                    <tr key={item.ID_finItem} className="hover:bg-slate-50 transition-colors">
+                                                        <td className="px-6 py-3 font-medium text-slate-700 max-w-[200px] truncate pl-10" title={item.Raw_Line_Name}>
+                                                            {item.Raw_Line_Name}
+                                                        </td>
+                                                        <td className="px-6 py-3 text-right font-mono text-slate-600">${item.Line_Amount.toLocaleString()}</td>
+                                                        <td className="px-6 py-3">
+                                                            <select
+                                                                value={item.Master_Category || ''}
+                                                                onChange={(e) => handleMappingChange(item.ID_finItem, e.target.value)}
+                                                                disabled={isLocked}
+                                                                className={`w-full text-xs py-1.5 border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500 ${!item.Master_Category ? 'bg-red-50 text-red-700 border-red-200 font-bold' : 'bg-white'
+                                                                    } ${isLocked ? 'bg-slate-50 text-slate-400 cursor-not-allowed' : ''}`}
+                                                            >
+                                                                <option value="">-- [REQUIRED] Select Target --</option>
+                                                                {CATEGORY_OPTIONS.map(opt => (
+                                                                    <option key={opt.id} value={opt.id}>
+                                                                        {opt.group}: {opt.label}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                        </td>
+                                                        <td className="px-6 py-3 text-right">
+                                                            {item.Master_Category ? (
+                                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                                                    MAPPED
+                                                                </span>
+                                                            ) : (
+                                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 uppercase">
+                                                                    Unmapped
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </React.Fragment>
+                                        ))
+                                    ) : (
+                                        // STANDARD VIEW (No Filters)
+                                        filteredItems.map(item => (
+                                            <tr key={item.ID_finItem} className="hover:bg-slate-50 transition-colors">
+                                                <td className="px-6 py-3 font-medium text-slate-700 max-w-[200px] truncate" title={item.Raw_Line_Name}>
+                                                    {item.Raw_Line_Name}
+                                                </td>
+                                                <td className="px-6 py-3 text-right font-mono text-slate-600">${item.Line_Amount.toLocaleString()}</td>
+                                                <td className="px-6 py-3">
+                                                    <select
+                                                        value={item.Master_Category || ''}
+                                                        onChange={(e) => handleMappingChange(item.ID_finItem, e.target.value)}
+                                                        disabled={isLocked}
+                                                        className={`w-full text-xs py-1.5 border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500 ${!item.Master_Category ? 'bg-red-50 text-red-700 border-red-200 font-bold' : 'bg-white'
+                                                            } ${isLocked ? 'bg-slate-50 text-slate-400 cursor-not-allowed' : ''}`}
+                                                    >
+                                                        <option value="">-- [REQUIRED] Select Target --</option>
+                                                        {CATEGORY_OPTIONS.map(opt => (
+                                                            <option key={opt.id} value={opt.id}>
+                                                                {opt.group}: {opt.label}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </td>
+                                                <td className="px-6 py-3 text-right">
+                                                    {item.Master_Category ? (
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                                            MAPPED
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 uppercase">
+                                                            Unmapped
+                                                        </span>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
                                 </tbody>
                             </table>
                         </div>
