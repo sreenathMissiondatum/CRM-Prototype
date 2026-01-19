@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
 import {
-    ShieldCheck, Calendar, Info, Lock,
-    TrendingUp, TrendingDown, Minus,
-    FileText, Users, Download, Activity,
-    DollarSign, Percent, BarChart3, PieChart, Pen
+    ShieldCheck, Calendar, Lock,
+    TrendingUp, Activity,
+    DollarSign, Percent, BarChart3, Pen,
+    Building2, Wallet, Scale,
+    Briefcase, ArrowRightLeft,
+    FileText, Users, CheckCircle
 } from 'lucide-react';
 
 const FinancialIntelligence = ({ accountId = 'ACC-12345', onEditSource }) => {
     const [activeTab, setActiveTab] = useState('commercial');
 
     // --- Mock Data (Contract: finProfile_bus [F1_rp1], Read-Only) ---
-    // Represents the "Single Source of Truth" for Underwriting
-    // Schema: F1_rp1
     const finProfile_bus = {
         meta: {
             Account_ID: accountId,
@@ -69,7 +69,7 @@ const FinancialIntelligence = ({ accountId = 'ACC-12345', onEditSource }) => {
             ROA_rp1: '32.9%',
             RevOE_rp1: '5.68x',
             ROE_rp1: '85.4%',
-            opExOA_rp1: '44.8%', // 0.98 -> %
+            opExOA_rp1: '44.8%',
             opExOE_rp1: '116.2%'
         },
         leverage: {
@@ -100,302 +100,349 @@ const FinancialIntelligence = ({ accountId = 'ACC-12345', onEditSource }) => {
         }
     };
 
-    // --- Helpers ---
     const logAccess = (action, details = {}) => {
         console.log(`[AUDIT] Action: ${action} | User: CurrentUser | Context: Financial_Intelligence | Resource: ${accountId}`);
     };
 
-    React.useEffect(() => {
-        logAccess('VIEW_PAGE', { period: finProfile_bus.meta.rp1_fiscalYr });
-    }, []);
-
     return (
-        <div className="space-y-8 pb-10">
+        <div className="bg-slate-50/50 min-h-screen pb-20 -mx-6 -my-6 animate-in fade-in duration-500">
 
-            {/* HEADER SECTION */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-                <div className="flex flex-col md:flex-row justify-between md:items-start gap-6">
-                    <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <h2 className="text-xl font-bold text-slate-900">Financial Intelligence</h2>
-                            {finProfile_bus.meta.status_finStmnt_rp1 === 'Locked' ? (
-                                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-200">
-                                    <ShieldCheck size={14} /> VERIFIED
-                                </span>
-                            ) : (
-                                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-bold border border-amber-200">
-                                    <FileText size={14} /> DRAFT
-                                </span>
-                            )}
+            {/* 1. HEADER & META CONTROL */}
+            <div className="bg-white border-b border-slate-200 px-8 py-5 sticky top-0 z-30 shadow-sm">
+                <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div className="flex items-center gap-4">
+                        <div className="p-2.5 bg-slate-900 rounded-lg text-white shadow-md">
+                            <Building2 size={24} strokeWidth={1.5} />
                         </div>
-                        <p className="text-slate-500 text-sm max-w-2xl">
-                            Verified financial data used for credit underwriting and risk monitoring.
-                            Read-only view of <strong>finProfile_bus ({finProfile_bus.meta.rp1_fiscalYr})</strong>.
-                        </p>
+                        <div>
+                            <div className="flex items-center gap-3">
+                                <h2 className="text-lg font-bold text-slate-900 tracking-tight">Financial Intelligence</h2>
+                                {finProfile_bus.meta.status_finStmnt_rp1 === 'Locked' ? (
+                                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-100 uppercase tracking-wide">
+                                        <ShieldCheck size={10} /> Verified
+                                    </span>
+                                ) : (
+                                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold border border-amber-100 uppercase tracking-wide">
+                                        <FileText size={10} /> Draft
+                                    </span>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-3 text-xs text-slate-500 mt-1 font-medium">
+                                <span className="flex items-center gap-1.5"><Calendar size={12} className="text-slate-400" /> {finProfile_bus.meta.rp1_fiscalYr} ({finProfile_bus.meta.periodLabel})</span>
+                                <span className="h-3 w-px bg-slate-200"></span>
+                                <span>{finProfile_bus.meta.importMethod_finStmnt_rp1} Source</span>
+                                <span className="h-3 w-px bg-slate-200"></span>
+                                <span className="font-mono text-slate-400">ID: {finProfile_bus.meta.fingerprint}</span>
+                            </div>
+                        </div>
                     </div>
 
-                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 min-w-[280px]">
-                        <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                            <Calendar size={12} /> Reporting Period
-                        </div>
-                        <div className="flex items-center justify-between bg-white border border-slate-200 rounded px-3 py-2 shadow-sm">
-                            <div className="flex flex-col">
-                                <span className="text-sm font-bold text-slate-800">{finProfile_bus.meta.rp1_fiscalYr} ({finProfile_bus.meta.periodLabel})</span>
-                                <span className="text-xs text-slate-500">{finProfile_bus.meta.startDt_rp1} – {finProfile_bus.meta.endDt_rp1}</span>
-                            </div>
-                            <Lock size={14} className="text-slate-400" />
-                        </div>
-                        {finProfile_bus.meta.status_finStmnt_rp1 !== 'Locked' && onEditSource && (
+                    <div className="flex items-center gap-4">
+                        {/* Navigation Tabs */}
+                        <div className="flex bg-slate-100/80 p-1 rounded-lg border border-slate-200">
                             <button
-                                onClick={() => {
-                                    logAccess('EDIT_SOURCE_INITIATED');
-                                    onEditSource({
-                                        accountId,
-                                        statementId: finProfile_bus.meta.ID_finStmnt_rp1,
-                                        fiscalYear: finProfile_bus.meta.rp1_fiscalYr
-                                    });
-                                }}
-                                className="w-full mt-3 flex items-center justify-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 text-xs font-bold rounded border border-blue-200 hover:bg-blue-100 transition-colors"
+                                onClick={() => setActiveTab('commercial')}
+                                className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${activeTab === 'commercial' ? 'bg-white text-slate-900 shadow-sm border border-slate-200/50' : 'text-slate-500 hover:text-slate-700'}`}
                             >
-                                <Pen size={12} /> Edit Source Financials
+                                Commercial
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('personal')}
+                                className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${activeTab === 'personal' ? 'bg-white text-slate-900 shadow-sm border border-slate-200/50' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                Personal
+                            </button>
+                        </div>
+
+                        {onEditSource && (
+                            <button
+                                onClick={() => onEditSource({ accountId, fiscalYear: finProfile_bus.meta.rp1_fiscalYr })}
+                                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
+                                title="Edit Source"
+                            >
+                                <Pen size={16} />
                             </button>
                         )}
                     </div>
                 </div>
-
-                <div className="flex gap-6 mt-8 border-b border-slate-200">
-                    <button
-                        onClick={() => { setActiveTab('commercial'); logAccess('SWITCH_TAB_COMMERCIAL'); }}
-                        className={`pb-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'commercial' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'
-                            }`}
-                    >
-                        <FileText size={16} /> Commercial Financials
-                    </button>
-                    <button
-                        onClick={() => { setActiveTab('personal'); logAccess('SWITCH_TAB_PERSONAL'); }}
-                        className={`pb-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'personal' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'
-                            }`}
-                    >
-                        <Users size={16} /> Personal & Guarantors
-                    </button>
-                </div>
             </div>
 
-            {/* TAB CONTENT */}
-            {activeTab === 'commercial' && (
-                <div className="space-y-6 animate-in fade-in duration-300">
+            <div className="max-w-7xl mx-auto px-8 pt-8 space-y-8">
 
-                    {/* 1. INCOME STATEMENT & 2. BALANCE SHEET (GRID) */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* 2. EXECUTIVE OVERVIEW STRIP */}
+                {/* Requirement: Highlight key existing totals already shown (Revenue, Gross Profit, NOI, Net Profit) */}
+                <div className="grid grid-cols-4 gap-6">
+                    <HeroCard label="Total Revenue" value={finProfile_bus.income.revenue_rp1} icon={DollarSign} color="text-slate-600" />
+                    <HeroCard label="Gross Profit" value={finProfile_bus.income.margGros_rp1} icon={TrendingUp} color="text-emerald-600" />
+                    <HeroCard label="Net Op. Income" value={finProfile_bus.income.opIncNet_rp1} icon={Activity} color="text-blue-600" />
+                    <HeroCard label="Net Profit" value={finProfile_bus.income.margNet_rp1} icon={Wallet} color="text-purple-600" />
+                </div>
 
-                        {/* Income Statement */}
-                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
-                            <SectionHeader title="1. Income Statement" icon={DollarSign} />
-                            <div className="divide-y divide-slate-50 flex-1">
-                                <Row label="Revenue" value={finProfile_bus.income.revenue_rp1} bold />
-                                <Row label="COGS" value={finProfile_bus.income.COGS_rp1} indent />
-                                <Row label="Gross Profit" value={finProfile_bus.income.margGros_rp1} highlight />
-                                <Row label="Operating Expenses" value={finProfile_bus.income.opEx_rp1} />
-                                <Row label="Net Operating Income" value={finProfile_bus.income.opIncNet_rp1} bold />
-                                <Row label="EBITDA" value={finProfile_bus.income.EBITDA_rp1} highlight />
-                                <Row label="Depreciation & Amort" value={finProfile_bus.income.deprAmort_rp1} indent />
-                                <Row label="Interest Expense" value={finProfile_bus.income.interest_rp1} indent />
-                                <Row label="EBT" value={finProfile_bus.income.EBT_rp1} />
-                                <Row label="Taxes" value={finProfile_bus.income.tax_rp1} indent />
-                                <Row label="Owner Draws" value={finProfile_bus.income.ownerDraw_01_rp1} indent />
-                                <Row label="Net Profit" value={finProfile_bus.income.margNet_rp1} highlight />
+                {activeTab === 'commercial' && (
+                    <div className="space-y-8 animate-in slide-in-from-bottom-2 duration-300">
+
+                        {/* 3. FINANCIAL STATEMENTS - DUAL PANEL REFINEMENT */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+                            {/* LEFT: Income Statement */}
+                            <div className="group bg-white rounded-xl border border-slate-200 shadow-sm">
+                                <PanelHeader title="Income Statement" icon={FileText} subtitle="Operating Performance" />
+                                <div className="p-1">
+                                    <table className="w-full text-sm">
+                                        <tbody className="divide-y divide-slate-50">
+                                            <DataRow label="Revenue" value={finProfile_bus.income.revenue_rp1} bold />
+                                            <DataRow label="COGS" value={finProfile_bus.income.COGS_rp1} indent />
+                                            <DataRow label="Gross Profit" value={finProfile_bus.income.margGros_rp1} highlight />
+
+                                            <div className="h-2"></div> {/* Visual spacer */}
+
+                                            <DataRow label="Operating Expenses" value={finProfile_bus.income.opEx_rp1} />
+                                            <DataRow label="Net Operating Income (NOI)" value={finProfile_bus.income.opIncNet_rp1} bold />
+
+                                            <div className="h-2"></div>
+
+                                            <DataRow label="EBITDA" value={finProfile_bus.income.EBITDA_rp1} highlight />
+                                            <DataRow label="Depreciation & Amortization" value={finProfile_bus.income.deprAmort_rp1} indent />
+                                            <DataRow label="Interest Expense" value={finProfile_bus.income.interest_rp1} indent />
+                                            <DataRow label="Earnings Before Tax (EBT)" value={finProfile_bus.income.EBT_rp1} />
+                                            <DataRow label="Taxes" value={finProfile_bus.income.tax_rp1} indent />
+                                            <DataRow label="Owner Draws" value={finProfile_bus.income.ownerDraw_01_rp1} indent />
+
+                                            <DataRow label="Net Profit" value={finProfile_bus.income.margNet_rp1} highlight last />
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
-                        </div>
 
-                        {/* Balance Sheet */}
-                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
-                            <SectionHeader title="2. Balance Sheet Summary" icon={BarChart3} />
-                            <div className="divide-y divide-slate-50 flex-1">
-                                <Row label="Cash" value={finProfile_bus.balanceSheet.cash_rp1} indent />
-                                <Row label="Accts Receivable" value={finProfile_bus.balanceSheet.ar_rp1} indent />
-                                <Row label="Inventory" value={finProfile_bus.balanceSheet.inv_rp1} indent />
-                                <Row label="Other C. Assets" value={finProfile_bus.balanceSheet.caOth_rp1} indent />
-                                <Row label="Total Current Assets" value={finProfile_bus.balanceSheet.assetsCur_rp1} bold />
-                                <Row label="Fixed Assets" value={finProfile_bus.balanceSheet.assetsFix_rp1} />
-                                <Row label="Non-Fixed Assets" value={finProfile_bus.balanceSheet.assetsNFix_rp1} />
-                                <Row label="Total Assets" value={finProfile_bus.balanceSheet.assetsTot_rp1} highlight />
+                            {/* RIGHT: Balance Sheet */}
+                            <div className="group bg-white rounded-xl border border-slate-200 shadow-sm">
+                                <PanelHeader title="Balance Sheet" icon={Scale} subtitle="Financial Position" />
+                                <div className="p-1">
+                                    <table className="w-full text-sm">
+                                        <tbody className="divide-y divide-slate-50">
+                                            {/* ASSETS */}
+                                            <SectionLabel label="Assets" />
+                                            <DataRow label="Cash & Equivalents" value={finProfile_bus.balanceSheet.cash_rp1} indent />
+                                            <DataRow label="Accounts Receivable" value={finProfile_bus.balanceSheet.ar_rp1} indent />
+                                            <DataRow label="Inventory" value={finProfile_bus.balanceSheet.inv_rp1} indent />
+                                            <DataRow label="Other Current Assets" value={finProfile_bus.balanceSheet.caOth_rp1} indent />
+                                            <DataRow label="Total Current Assets" value={finProfile_bus.balanceSheet.assetsCur_rp1} bold />
+                                            <DataRow label="Fixed Assets" value={finProfile_bus.balanceSheet.assetsFix_rp1} />
+                                            <DataRow label="Non-Fixed Assets" value={finProfile_bus.balanceSheet.assetsNFix_rp1} />
+                                            <DataRow label="Total Assets" value={finProfile_bus.balanceSheet.assetsTot_rp1} highlight />
 
-                                <Divider />
+                                            {/* LIABILITIES & EQUITY */}
+                                            <SectionLabel label="Liabilities & Equity" />
+                                            <DataRow label="Current Liabilities" value={finProfile_bus.balanceSheet.liabtsCur_rp1} bold />
+                                            <DataRow label="Credit Cards" value={finProfile_bus.balanceSheet.crCards_rp1} indent />
+                                            <DataRow label="Long Term Debt" value={finProfile_bus.balanceSheet.LTD_rp1} />
+                                            <DataRow label="Total Liabilities" value={finProfile_bus.balanceSheet.liabtsTot_rp1} highlight />
+                                            <DataRow label="Total Equity" value={finProfile_bus.balanceSheet.equityTot_rp1} highlight />
 
-                                <Row label="Current Liabilities" value={finProfile_bus.balanceSheet.liabtsCur_rp1} bold />
-                                <Row label="Credit Cards" value={finProfile_bus.balanceSheet.crCards_rp1} indent />
-                                <Row label="Long Term Debt" value={finProfile_bus.balanceSheet.LTD_rp1} />
-                                <Row label="Total Liabilities" value={finProfile_bus.balanceSheet.liabtsTot_rp1} highlight />
-                                <Row label="Total Equity" value={finProfile_bus.balanceSheet.equityTot_rp1} highlight />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* 3. DSCR PROFILE */}
-                    <ProfileSection title="3. DSCR Profile" icon={Activity}>
-                        <MetricBox label="DSCR (Business)" value={finProfile_bus.dscr.DSCR_bus_an1} />
-                        <MetricBox label="DSCR (Global)" value={finProfile_bus.dscr.DSCR_glob_an1} highlight />
-                        <MetricBox label="DSCR (Global Proj)" value={finProfile_bus.dscr.DSCR_globProj_an1} />
-                        <div className="flex items-center justify-center text-xs text-slate-400 italic px-4">
-                            *Read-only from underwriting analysis
-                        </div>
-                    </ProfileSection>
-
-                    {/* 4. PROFITABILITY PROFILE */}
-                    <ProfileSection title="4. Profitability Profile" icon={Percent}>
-                        <div className="md:col-span-4 grid grid-cols-1 md:grid-cols-4 gap-4">
-                            {/* Margins */}
-                            <MetricBox label="Gross Margin" value={finProfile_bus.profitability.margGros_prcnt_rp1} />
-                            <MetricBox label="Net Margin" value={finProfile_bus.profitability.margNet_prcnt_rp1} />
-
-                            {/* Returns */}
-                            <MetricBox label="Return on Assets" value={finProfile_bus.profitability.ROA_rp1} />
-                            <MetricBox label="Return on Equity" value={finProfile_bus.profitability.ROE_rp1} />
-
-                            {/* Efficiency */}
-                            <MetricBox label="Revenue over Assets" value={finProfile_bus.profitability.RevOA_rp1} />
-                            <MetricBox label="Revenue over Equity" value={finProfile_bus.profitability.RevOE_rp1} />
-                            <MetricBox label="OpEx over Assets" value={finProfile_bus.profitability.opExOA_rp1} />
-                            <MetricBox label="OpEx over Equity" value={finProfile_bus.profitability.opExOE_rp1} />
-                        </div>
-                    </ProfileSection>
-
-                    {/* 5. LEVERAGE PROFILE */}
-                    <ProfileSection title="5. Leverage Profile" icon={BarChart3}>
-                        {/* 1. Business Leverage */}
-                        <div className="md:col-span-4 grid grid-cols-1 md:grid-cols-3 gap-4 border-b border-slate-100 pb-4 mb-2">
-                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider md:col-span-3">Business Leverage</div>
-                            <MetricBox label="Leverage Ratio (Business)" value={finProfile_bus.leverage.leverage_bus_rp1 || '—'} />
-                            <MetricBox label="Liabilities / Fixed Assets" value={finProfile_bus.leverage.liabtsTot_FA_rp1 || '—'} />
-                            <MetricBox label="Liabilities / Revenue" value={finProfile_bus.leverage.liabtsTot_Rev_rp1 || '—'} />
-                        </div>
-
-                        {/* 2. Global Leverage */}
-                        <div className="md:col-span-4 grid grid-cols-1 md:grid-cols-3 gap-4 border-b border-slate-100 pb-4 mb-2">
-                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider md:col-span-3">Global Leverage (Business + Household)</div>
-                            <MetricBox label="Global Leverage Ratio" value={finProfile_bus.leverage.leverage_glob_rp1 || '—'} />
-                            <MetricBox label="Glob. Liab / Fixed Assets" value={finProfile_bus.leverage.liabtsGlob_FA_rp1 || '—'} />
-                            <MetricBox label="Glob. Liab / Revenue" value={finProfile_bus.leverage.liabtsGlob_Rev_rp1 || '—'} />
-                        </div>
-
-                        {/* 3. Projected Leverage */}
-                        <div className="md:col-span-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider md:col-span-3">Projected Leverage (Post-Loan)</div>
-                            <MetricBox label="Projected Leverage Ratio" value={finProfile_bus.leverage.leverage_busProj_rp1 || '—'} />
-                            <MetricBox label="Proj. Liab / Fixed Assets" value={finProfile_bus.leverage.liabtsProj_FA_rp1 || '—'} />
-                            <MetricBox label="Proj. Liab / Revenue" value={finProfile_bus.leverage.liabtsProj_Rev_rp1 || '—'} />
-                        </div>
-                    </ProfileSection>
-
-                    {/* 6. LIQUIDITY PROFILE & 7. ACTIVITY PROFILE */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                            <SectionHeader title="6. Liquidity Profile" icon={DollarSign} />
-                            <div className="p-6 grid grid-cols-2 gap-4">
-                                <div className="flex flex-col p-3 bg-slate-50 rounded-lg border border-slate-100 relative group">
-                                    <div className="flex justify-between items-start mb-1">
-                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">Working Capital</span>
-                                        <Lock size={10} className="text-slate-300" />
-                                    </div>
-                                    <span className="text-lg font-bold text-slate-800">{finProfile_bus.liquidity.wCap_rp1 || '—'}</span>
-                                </div>
-                                <div className="flex flex-col p-3 bg-slate-50 rounded-lg border border-slate-100 relative group">
-                                    <div className="flex justify-between items-start mb-1">
-                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">Current Ratio</span>
-                                        <Lock size={10} className="text-slate-300" />
-                                    </div>
-                                    <span className="text-lg font-bold text-slate-800">{finProfile_bus.liquidity.curentR_rp1 || '—'}</span>
-                                </div>
-                                <div className="flex flex-col p-3 bg-slate-50 rounded-lg border border-slate-100 relative group">
-                                    <div className="flex justify-between items-start mb-1">
-                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">Quick Ratio</span>
-                                        <Lock size={10} className="text-slate-300" />
-                                    </div>
-                                    <span className="text-lg font-bold text-slate-800">{finProfile_bus.liquidity.quickR_rp1 || '—'}</span>
-                                </div>
-                                <div className="flex flex-col p-3 bg-slate-50 rounded-lg border border-slate-100 relative group">
-                                    <div className="flex justify-between items-start mb-1">
-                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">Liquid Assets Ratio</span>
-                                        <Lock size={10} className="text-slate-300" />
-                                    </div>
-                                    <span className="text-lg font-bold text-slate-800">{finProfile_bus.liquidity.liquidA_rp1 || '—'}</span>
+                                            {finProfile_bus.balanceSheet.balS_checkYn_rp1 && (
+                                                <tr className="bg-emerald-50/50">
+                                                    <td colSpan={2} className="px-6 py-2 text-xs font-medium text-emerald-700 flex items-center gap-2">
+                                                        <CheckCircle size={12} /> Equation Balanced (Assets = Liab + Eq)
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
 
-                        <ProfileSection title="7. Activity Profile" icon={Activity}>
-                            <MetricBox label="DIO (Days Inv)" value={finProfile_bus.activity.DIO_an1} />
-                            <MetricBox label="DSO (Days Sales)" value={finProfile_bus.activity.DSO_an1} />
-                            <MetricBox label="DPO (Days Payable)" value={finProfile_bus.activity.DPO_an1} />
-                            <MetricBox label="Cash Conv. Cycle" value={finProfile_bus.activity.CCC_an1} />
-                        </ProfileSection>
+                        {/* 4. RATIO & PROFILE SECTIONS - CARD-BASED LAYOUT */}
+
+                        {/* Row A: Coverage & Liquidity */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+                            {/* Coverage Profile (DSCR) */}
+                            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                                <div className="flex items-center gap-2 mb-6 text-slate-800 font-bold uppercase tracking-wide text-xs">
+                                    <ShieldCheck size={16} className="text-slate-400" /> Coverage Profile (DSCR)
+                                </div>
+                                <div className="grid grid-cols-3 gap-6">
+                                    <MetricCard label="Business DSCR" value={finProfile_bus.dscr.DSCR_bus_an1} subtext="Operational Only" />
+                                    <MetricCard label="Global DSCR" value={finProfile_bus.dscr.DSCR_glob_an1} highlight subtext="Bus + Household" />
+                                    <MetricCard label="Global Projected" value={finProfile_bus.dscr.DSCR_globProj_an1} subtext="Post-Loan" />
+                                </div>
+                            </div>
+
+                            {/* Liquidity Profile */}
+                            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                                <div className="flex items-center gap-2 mb-6 text-slate-800 font-bold uppercase tracking-wide text-xs">
+                                    <Wallet size={16} className="text-slate-400" /> Liquidity Profile
+                                </div>
+                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                                    <MetricCard label="Working Capital" value={finProfile_bus.liquidity.wCap_rp1} />
+                                    <MetricCard label="Current Ratio" value={finProfile_bus.liquidity.curentR_rp1} />
+                                    <MetricCard label="Quick Ratio" value={finProfile_bus.liquidity.quickR_rp1} />
+                                    <MetricCard label="Liquid Assets %" value={finProfile_bus.liquidity.liquidA_rp1} />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Row B: Profitability */}
+                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                            <div className="flex items-center gap-2 mb-6 text-slate-800 font-bold uppercase tracking-wide text-xs">
+                                <Percent size={16} className="text-slate-400" /> Profitability Profile
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-y-6 gap-x-8">
+                                <MetricCard label="Gross Margin" value={finProfile_bus.profitability.margGros_prcnt_rp1} />
+                                <MetricCard label="Net Margin" value={finProfile_bus.profitability.margNet_prcnt_rp1} />
+
+                                <DividerVertical />
+
+                                <MetricCard label="ROA" value={finProfile_bus.profitability.ROA_rp1} />
+                                <MetricCard label="ROE" value={finProfile_bus.profitability.ROE_rp1} />
+
+                                <DividerVertical />
+
+                                <MetricCard label="Rev/Assets" value={finProfile_bus.profitability.RevOA_rp1} />
+                                <MetricCard label="Rev/Equity" value={finProfile_bus.profitability.RevOE_rp1} />
+                                <MetricCard label="OpEx/Assets" value={finProfile_bus.profitability.opExOA_rp1} />
+                                <MetricCard label="OpEx/Equity" value={finProfile_bus.profitability.opExOE_rp1} />
+                            </div>
+                        </div>
+
+                        {/* Row C: Leverage (Complex Grouping) */}
+                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                            <div className="flex items-center gap-2 mb-6 text-slate-800 font-bold uppercase tracking-wide text-xs">
+                                <Scale size={16} className="text-slate-400" /> Leverage Profile
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 divide-y md:divide-y-0 md:divide-x divide-slate-100">
+
+                                {/* 1. Business */}
+                                <div className="space-y-4 pt-4 md:pt-0">
+                                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Business Leverage</div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <MetricCard label="Leverage Ratio" value={finProfile_bus.leverage.leverage_bus_rp1} />
+                                        <div className="col-span-2 grid grid-cols-2 gap-4">
+                                            <MetricCard label="Liab / Fixed Assets" value={finProfile_bus.leverage.liabtsTot_FA_rp1} small />
+                                            <MetricCard label="Liab / Revenue" value={finProfile_bus.leverage.liabtsTot_Rev_rp1} small />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* 2. Global */}
+                                <div className="space-y-4 pt-4 md:pt-0 md:pl-8">
+                                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Global Leverage</div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <MetricCard label="Leverage Ratio" value={finProfile_bus.leverage.leverage_glob_rp1} />
+                                        <div className="col-span-2 grid grid-cols-2 gap-4">
+                                            <MetricCard label="Liab / Fixed Assets" value={finProfile_bus.leverage.liabtsGlob_FA_rp1} small />
+                                            <MetricCard label="Liab / Revenue" value={finProfile_bus.leverage.liabtsGlob_Rev_rp1} small />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* 3. Projected */}
+                                <div className="space-y-4 pt-4 md:pt-0 md:pl-8">
+                                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Projected (Post-Loan)</div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <MetricCard label="Leverage Ratio" value={finProfile_bus.leverage.leverage_busProj_rp1} />
+                                        <div className="col-span-2 grid grid-cols-2 gap-4">
+                                            <MetricCard label="Liab / Fixed Assets" value={finProfile_bus.leverage.liabtsProj_FA_rp1} small />
+                                            <MetricCard label="Liab / Revenue" value={finProfile_bus.leverage.liabtsProj_Rev_rp1} small />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Row D: Activity (Card Row) */}
+                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                            <div className="flex items-center gap-2 mb-6 text-slate-800 font-bold uppercase tracking-wide text-xs">
+                                <ArrowRightLeft size={16} className="text-slate-400" /> Activity Profile
+                            </div>
+                            <div className="grid grid-cols-4 gap-6">
+                                <MetricCard label="DIO (Days Inventory)" value={finProfile_bus.activity.DIO_an1} />
+                                <MetricCard label="DSO (Days Sales)" value={finProfile_bus.activity.DSO_an1} />
+                                <MetricCard label="DPO (Days Payable)" value={finProfile_bus.activity.DPO_an1} />
+                                <MetricCard label="Cash Conv. Cycle" value={finProfile_bus.activity.CCC_an1} highlight />
+                            </div>
+                        </div>
                     </div>
+                )}
 
-                </div>
-            )}
-
-            {activeTab === 'personal' && (
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-12 text-center">
-                    <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100">
-                        <Users size={24} className="text-slate-400" />
+                {activeTab === 'personal' && (
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-16 text-center">
+                        <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-slate-100 shadow-sm">
+                            <Users size={32} className="text-slate-300" />
+                        </div>
+                        <h3 className="text-xl font-bold text-slate-900 mb-2">Personal Guarantor Aggregation</h3>
+                        <p className="text-slate-500 max-w-md mx-auto text-sm leading-relaxed">
+                            Aggregate financial data from all Owners and Guarantors.
+                            <br />Sourced directly from Contact Financial Profiles.
+                        </p>
                     </div>
-                    <h3 className="text-lg font-bold text-slate-800">Personal Guarantor Aggregation</h3>
-                    <p className="text-slate-500 max-w-md mx-auto mt-2 text-sm">
-                        Aggregate financial data from all Owners and Guarantors.
-                        Sourced from Contact Financial Profiles.
-                    </p>
-                </div>
-            )}
-
-            <div className="mt-8 border-t border-slate-200 pt-6 flex justify-between items-center text-xs text-slate-400">
-                <div className="flex gap-4">
-                    <span>Generated: {new Date().toLocaleDateString()}</span>
-                    <span>Fingerprint: {finProfile_bus.meta.fingerprint}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <Lock size={10} /> Read-Only
-                </div>
+                )}
             </div>
-
         </div>
     );
 };
 
-// --- Sub-components ---
+// --- Sub-Components for Clean Architecture ---
 
-const SectionHeader = ({ title, icon: Icon }) => (
-    <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-        <div className="flex items-center gap-2">
-            {Icon && <Icon size={14} className="text-slate-400" />}
-            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wide">{title}</h3>
+const HeroCard = ({ label, value, icon: Icon, color }) => (
+    <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-start justify-between group hover:shadow-md transition-shadow">
+        <div>
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">{label}</div>
+            <div className={`text-2xl font-mono font-bold ${color}`}>{value}</div>
+        </div>
+        <div className={`p-2 rounded-lg bg-slate-50 text-slate-300 group-hover:text-slate-400 transition-colors`}>
+            {Icon && <Icon size={20} />}
+        </div>
+    </div>
+);
+
+const PanelHeader = ({ title, icon: Icon, subtitle }) => (
+    <div className="px-6 py-4 border-b border-slate-50 flex justify-between items-center bg-slate-[0.25]">
+        <div className="flex items-center gap-3">
+            <div className="p-1.5 bg-slate-100 rounded text-slate-500">
+                {Icon && <Icon size={16} />}
+            </div>
+            <div>
+                <h3 className="text-sm font-bold text-slate-800">{title}</h3>
+                <div className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">{subtitle}</div>
+            </div>
         </div>
         <Lock size={12} className="text-slate-300" />
     </div>
 );
 
-const Row = ({ label, value, indent, bold, highlight }) => (
-    <div className={`flex justify-between items-center pr-6 py-2.5 hover:bg-slate-50 transition-colors ${indent ? 'pl-10' : 'pl-6'} ${highlight ? 'bg-slate-50/50' : ''}`}>
-        <span className={`text-sm ${bold || highlight ? 'font-bold text-slate-800' : 'text-slate-600'}`}>{label}</span>
-        <span className={`font-mono text-sm ${highlight ? 'font-bold text-blue-700' : bold ? 'font-bold text-slate-900' : 'text-slate-700'}`}>{value}</span>
-    </div>
+const SectionLabel = ({ label }) => (
+    <tr className="bg-slate-50/50">
+        <td colSpan={2} className="px-6 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-y border-slate-50">
+            {label}
+        </td>
+    </tr>
 );
 
-const Divider = () => <div className="border-t border-slate-100 mx-6 my-2"></div>;
+const DataRow = ({ label, value, indent, bold, highlight, last }) => (
+    <tr className={`group transition-colors hover:bg-slate-50 cursor-default ${highlight ? 'bg-slate-50/60' : ''}`}>
+        <td className={`py-2.5 pr-4 ${indent ? 'pl-10' : 'pl-6'} ${bold || highlight ? 'font-bold text-slate-800' : 'text-slate-600 font-medium'} text-sm`}>
+            {label}
+        </td>
+        <td className={`py-2.5 px-6 text-right font-mono text-sm ${bold || highlight ? 'font-bold text-slate-900' : 'text-slate-600'} ${last ? 'rounded-br-xl' : ''}`}>
+            {value}
+        </td>
+    </tr>
+);
 
-const ProfileSection = ({ title, icon, children }) => (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <SectionHeader title={title} icon={icon} />
-        <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-            {children}
+const MetricCard = ({ label, value, subtext, highlight, small }) => (
+    <div className="flex flex-col">
+        <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 truncate" title={label}>{label}</div>
+        <div className={`font-mono font-bold ${small ? 'text-sm' : 'text-xl'} ${highlight ? 'text-blue-600' : 'text-slate-800'}`}>
+            {value || '—'}
         </div>
+        {subtext && <div className="text-[10px] text-slate-400 mt-0.5 font-medium">{subtext}</div>}
     </div>
 );
 
-const MetricBox = ({ label, value, highlight }) => (
-    <div className="flex flex-col p-3 bg-slate-50 rounded-lg border border-slate-100">
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 truncate" title={label}>{label}</span>
-        <span className={`text-lg font-bold ${highlight ? 'text-blue-600' : 'text-slate-800'}`}>{value}</span>
-    </div>
+const DividerVertical = () => (
+    <div className="hidden lg:block w-px bg-slate-100 my-1 mx-auto"></div>
 );
 
 export default FinancialIntelligence;
