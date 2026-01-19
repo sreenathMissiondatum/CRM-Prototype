@@ -51,45 +51,80 @@ const CreateLead = ({ onNavigate, onSetSelectedLead }) => {
 
 
     // --- Form Data State (Exact Mirror of LeadDetailsTab) ---
+    // --- Form Data State (Enhanced for Ownership Parity) ---
     const [formData, setFormData] = useState({
         // S1: Identification
-        id: 'LEAD-NEW', // Placeholder
+        id: 'LEAD-NEW',
         createdDate: new Date().toISOString().split('T')[0],
-        source: 'Web Portal', // Default
-        assignedOfficer: 'Alex Morgan', // Default to current user
+        source: 'Web Portal',
+        assignedOfficer: 'Alex Morgan',
 
         // S2: Identity
         businessName: '',
         dbaName: '',
-        entityType: 'LLC', // Default
+        entityType: 'LLC',
         ein: '',
-        phone: '',
         phone: '',
         email: '',
         website: '',
 
-        // S3: Contacts & Ownership
+        // S3: Contacts & Ownership (Split Model)
+        ownership: [
+            {
+                id: 1,
+                firstName: '',
+                lastName: '',
+                percent: '',
+                isCommonHb: false,
+                otherBusinesses: false,
+                otherBusPercentage: '',
+                otherBusDescription: '',
+                // Financials
+                incGros_hhd: '',
+                netWorth_hhd: '',
+                amtExistLoans_hhd: '',
+                dServExistLoans_mo_hhd: '',
+                // Personal
+                dob: '',
+                industryExperience: '',
+                ownershipExperience: '',
+                demographicSource: '',
+                lmiStatus: '',
+                ssn: '',
+                portalAccess: false
+            }
+        ],
         contacts: [
-            // Start with one empty owner row
-            { id: 1, firstName: '', lastName: '', title: 'Owner', ownership: '', isHousehold: false, otherBusiness: false, annualIncome: '', netWorth: '', existingLoans: '', monthlyDebt: '', ...CANONICAL_CONTACTS[0].demographics }
+            {
+                id: 'c-own-1',
+                role: 'Owner',
+                recordType: 'Owner',
+                isOwner: true,
+                ownerLink: 1,
+                isPrimary: true,
+                firstName: '',
+                lastName: '',
+                email: '',
+                phone: '',
+                title: 'Owner'
+            }
         ],
 
         // S4: Industry & Location
         naicsCode: '',
         naicsDescription: '',
-        sector: '', // Derived
+        sector: '',
         address: '',
         city: '',
-        state: 'MI', // Default
+        state: 'MI',
         zip: '',
-        censusTract: '', // Derived
-        isLowIncome: false, // Derived
+        censusTract: '',
+        isLowIncome: false,
 
         // S5: Background
         dateEstablished: '',
-        yearsInBusiness: 0, // Derived
-        isStartup: true, // Derived < 2 years
-        fteCount: '',
+        yearsInBusiness: 0,
+        isStartup: true,
         fteCount: '',
         description: '',
         // Impact Flags
@@ -182,28 +217,208 @@ const CreateLead = ({ onNavigate, onSetSelectedLead }) => {
         }
     };
 
-    // Contacts & Ownership Helpers
-    const updateContact = (id, field, value) => {
+    // --- Contacts & Ownership Logic (Parity with LeadDetailsTab) ---
+
+    // 1. Add Owner
+    const addOwner = () => {
+        const newOwnerId = Math.max(...formData.ownership.map(o => o.id), 0) + 1;
+        const isFirstOwner = formData.ownership.length === 0;
+
+        const newOwner = {
+            id: newOwnerId,
+            firstName: '',
+            lastName: '',
+            percent: '',
+            isCommonHb: false,
+            otherBusinesses: false,
+            otherBusPercentage: '',
+            otherBusDescription: '',
+            incGros_hhd: '',
+            netWorth_hhd: '',
+            amtExistLoans_hhd: '',
+            dServExistLoans_mo_hhd: '',
+            dob: '',
+            industryExperience: '',
+            ownershipExperience: '',
+            demographicSource: '',
+            lmiStatus: '',
+            ssn: '',
+            portalAccess: false
+        };
+
+        const newContact = {
+            id: `c-own-${newOwnerId}-${Date.now()}`,
+            role: 'Owner',
+            recordType: 'Owner',
+            isOwner: true,
+            ownerLink: newOwnerId,
+            isPrimary: isFirstOwner,
+            firstName: '',
+            lastName: '',
+            email: '',
+            phone: '',
+            title: 'Owner'
+        };
+
+        setFormData(prev => ({
+            ...prev,
+            ownership: [...prev.ownership, newOwner],
+            contacts: [newContact, ...prev.contacts]
+        }));
         setIsDirty(true);
-        setFormData(prev => ({
-            ...prev,
-            contacts: prev.contacts.map(c => c.id === id ? { ...c, [field]: value } : c)
-        }));
     };
 
+    // 2. Remove Owner
+    const removeOwner = (id) => {
+        setFormData(prev => {
+            const remainingOwners = prev.ownership.filter(o => o.id !== id);
+            let updatedContacts = prev.contacts.filter(c => c.ownerLink !== id);
+
+            // Handle Primary Reassignment
+            const wasPrimary = prev.contacts.find(c => c.ownerLink === id)?.isPrimary;
+            if (wasPrimary && remainingOwners.length > 0) {
+                const nextOwnerId = remainingOwners[0].id;
+                updatedContacts = updatedContacts.map(c =>
+                    c.ownerLink === nextOwnerId ? { ...c, isPrimary: true } : c
+                );
+            }
+
+            // Household Dissolution Logic
+            let finalOwnership = remainingOwners;
+            if (remainingOwners.length === 1) {
+                if (remainingOwners[0].isCommonHb) {
+                    finalOwnership = remainingOwners.map(o => ({ ...o, isCommonHb: false }));
+                }
+            }
+
+            return {
+                ...prev,
+                ownership: finalOwnership,
+                contacts: updatedContacts
+            };
+        });
+        setIsDirty(true);
+    };
+
+    // 3. Update Owner
+    const updateOwner = (id, field, value) => {
+        setFormData(prev => {
+            let updatedOwnership = prev.ownership.map(o => {
+                if (o.id !== id) return o;
+
+                if (field === 'otherBusinesses' && value === false) {
+                    return { ...o, [field]: value, otherBusPercentage: '', otherBusDescription: '' };
+                }
+
+                if (field === 'isCommonHb') {
+                    if (prev.ownership.length === 1) {
+                        alert("At least two owners are required to form a 'Household'.");
+                        return o;
+                    }
+                }
+                return { ...o, [field]: value };
+            });
+
+            // Sync with Contacts if Name changes
+            let updatedContacts = prev.contacts;
+            if (field === 'firstName' || field === 'lastName') {
+                updatedContacts = prev.contacts.map(c => {
+                    if (c.ownerLink === id) {
+                        return { ...c, [field]: value };
+                    }
+                    return c;
+                });
+            }
+
+            return { ...prev, ownership: updatedOwnership, contacts: updatedContacts };
+        });
+        setIsDirty(true);
+    };
+
+    // 4. Update Contact
+    const updateContact = (id, field, value) => {
+        setFormData(prev => {
+            let updatedContacts = prev.contacts.map(c => c.id === id ? { ...c, [field]: value } : c);
+
+            // Sync BACK to Owner if Name changes
+            let updatedOwnership = prev.ownership;
+            if (field === 'firstName' || field === 'lastName') {
+                const contact = prev.contacts.find(c => c.id === id);
+                if (contact && contact.ownerLink) {
+                    updatedOwnership = prev.ownership.map(o => {
+                        if (o.id === contact.ownerLink) {
+                            return { ...o, [field]: value };
+                        }
+                        return o;
+                    });
+                }
+            }
+            return { ...prev, contacts: updatedContacts, ownership: updatedOwnership };
+        });
+        setIsDirty(true);
+    };
+
+    // 5. Add Contact (Non-Owner)
     const addContact = () => {
-        const newId = Math.max(...formData.contacts.map(c => c.id)) + 1;
+        const newId = `c${Date.now()}`;
         setFormData(prev => ({
             ...prev,
-            contacts: [...prev.contacts, { id: newId, firstName: '', lastName: '', title: '', ownership: '', isHousehold: false, ...CANONICAL_CONTACTS[0].demographics }]
+            contacts: [...prev.contacts, { id: newId, role: '', recordType: '', isPrimary: false, firstName: '', lastName: '', email: '', phone: '' }]
         }));
+        setIsDirty(true);
     };
 
+    // 6. Remove Contact
     const removeContact = (id) => {
         setFormData(prev => ({
             ...prev,
             contacts: prev.contacts.filter(c => c.id !== id)
         }));
+        setIsDirty(true);
+    };
+
+    // 7. Household Groups Logic
+    const getHouseholdGroups = () => {
+        const groups = [];
+        const householdOwners = formData.ownership.filter(o => o.isCommonHb);
+
+        if (householdOwners.length >= 2) {
+            groups.push({
+                id: 'household-group',
+                type: 'Household',
+                owners: householdOwners,
+                label: householdOwners.map(o => o.firstName).join(', ')
+            });
+        }
+
+        const individualOwners = formData.ownership.filter(o => {
+            if (!o.isCommonHb) return true;
+            if (householdOwners.length < 2) return true;
+            return false;
+        });
+
+        individualOwners.forEach(owner => {
+            groups.push({
+                id: `individual-${owner.id}`,
+                type: 'Individual',
+                owners: [owner],
+                label: `${owner.firstName} ${owner.lastName}`
+            });
+        });
+
+        return groups;
+    };
+
+    const householdGroups = getHouseholdGroups();
+
+    // 8. Validation
+    const isOwnershipValid = () => {
+        const totalOwnership = formData.ownership.reduce((sum, o) => sum + (parseFloat(o.percent) || 0), 0);
+        if (Math.abs(totalOwnership - 100) > 0.1) return false;
+
+        if (formData.ownership.length === 0) return false;
+
+        return formData.ownership.every(o => o.firstName && o.lastName && o.percent);
     };
 
     // --- Borrowing History Logic ---
@@ -281,7 +496,12 @@ const CreateLead = ({ onNavigate, onSetSelectedLead }) => {
 
     // Save Action
     const handleSave = () => {
-        // Validation logic would go here
+        // Validation logic
+        if (!isOwnershipValid()) {
+            alert("Please ensure Ownership Structure is valid (Total 100%, at least one owner) before saving.");
+            setSections(prev => ({ ...prev, contact: true })); // Auto-open contacts
+            return;
+        }
 
         // Simulate Save
         console.log("Saving Lead:", formData);
@@ -340,10 +560,24 @@ const CreateLead = ({ onNavigate, onSetSelectedLead }) => {
             <ContactsSection
                 isOpen={sections.contact}
                 onToggle={() => toggleSection('contact')}
+                variant="detailed"
+                ownership={formData.ownership}
                 contacts={formData.contacts}
+                householdGroups={householdGroups}
+                onUpdateOwner={updateOwner}
                 onUpdateContact={updateContact}
+                onAddOwner={addOwner}
                 onAddContact={addContact}
-                onRemoveContact={removeContact}
+                onRemoveOwner={removeOwner}
+                onRemoveContact={(id) => {
+                    const contact = formData.contacts.find(c => c.id === id);
+                    if (contact && contact.ownerLink) {
+                        removeOwner(contact.ownerLink);
+                    } else {
+                        removeContact(id);
+                    }
+                }}
+                onAudit={(action, data) => console.log(`[AUDIT] ${action}`, data)}
             />
 
             {/* S4: Industry & Location */}
