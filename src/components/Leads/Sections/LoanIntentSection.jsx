@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { CreditCard, Plus, Trash2, Info, Coins, LayoutDashboard, List, Lock, Unlock } from 'lucide-react';
+import { CreditCard, Plus, Trash2, Info, Coins, LayoutDashboard, List, Lock, Unlock, BadgeCheck } from 'lucide-react';
 import Section from '../../Shared/Section';
+import { programs } from '../../../data/loanPrograms';
 
 const LoanIntentSection = ({
     isOpen,
     onToggle,
     formData, // { fundingScenarios: [...] }
-    onUpdateScenarios // (scenarios) => ...
+    onUpdateScenarios, // (scenarios) => ...
+    onAudit // (action, data) => ...
 }) => {
     const [activeTab, setActiveTab] = useState('details');
 
@@ -52,7 +54,8 @@ const LoanIntentSection = ({
             useOfFundsDetail: '',
             ownerContribution: 0,
             otherFunding: 0,
-            status: 'Draft'
+            status: 'Draft',
+            loan_program_id: '' // Initialize
         };
         onUpdateScenarios([...scenarios, newScenario]);
     };
@@ -82,8 +85,37 @@ const LoanIntentSection = ({
     const toggleLock = (id) => {
         const sc = scenarios.find(s => s.id === id);
         if (!sc) return;
-        const newStatus = sc.status === 'Locked' ? 'Draft' : 'Locked';
-        updateScenario(id, 'status', newStatus);
+
+        if (sc.status === 'Locked') {
+            // Unlock Action
+            if (window.confirm("Unlocking will remove the selected Loan Program and allow edits. Continue?")) {
+                const updated = scenarios.map(s => {
+                    if (s.id !== id) return s;
+                    return { ...s, status: 'Draft', loan_program_id: '' }; // Clear program on unlock
+                });
+                onUpdateScenarios(updated);
+
+                // Audit Log
+                if (onAudit) onAudit('SCENARIO_UNLOCKED', { scenarioId: id, leadId: 'CURRENT' }); // Lead ID not passed, assuming parent context
+                if (onAudit) onAudit('LOAN_PROGRAM_CLEARED', { scenarioId: id, previousProgram: sc.loan_program_id });
+            }
+        } else {
+            // Lock Action
+            const updated = scenarios.map(s => {
+                if (s.id !== id) return s;
+                return { ...s, status: 'Locked' };
+            });
+            onUpdateScenarios(updated);
+
+            // Audit Log
+            if (onAudit) onAudit('SCENARIO_LOCKED', { scenarioId: id });
+        }
+    };
+
+    const updateLoanProgram = (id, programId) => {
+        updateScenario(id, 'loan_program_id', programId);
+
+        if (onAudit) onAudit('LOAN_PROGRAM_SELECTED', { scenarioId: id, programId: programId });
     };
 
     return (
@@ -197,79 +229,112 @@ const LoanIntentSection = ({
                                 </div>
 
                                 {/* Body */}
-                                <div className={`p-5 space-y-6 ${isLocked ? 'opacity-70 pointer-events-none grayscale-[0.3]' : ''}`}>
-                                    {/* Terms & Use */}
-                                    <div className="grid grid-cols-12 gap-6">
-                                        <div className="col-span-3">
-                                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Term (Mos)</label>
-                                            <input
-                                                type="number"
-                                                value={sc.term}
-                                                onChange={e => updateScenario(sc.id, 'term', e.target.value)}
-                                                className="w-full text-sm font-bold text-slate-700 border border-slate-200 rounded-lg px-3 py-2 focus:border-blue-500 outline-none"
-                                            />
-                                        </div>
-                                        <div className="col-span-9">
-                                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Use of Funds</label>
-                                            <div className="flex flex-wrap gap-2 mb-2">
-                                                {USE_OF_FUNDS_OPTIONS.map(opt => (
-                                                    <button
-                                                        key={opt}
-                                                        onClick={() => toggleUseOfFunds(sc.id, opt)}
-                                                        className={`px-2.5 py-1 rounded-md text-xs font-bold border transition-all ${sc.useOfFunds?.includes(opt) ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
-                                                    >
-                                                        {opt}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                            <input
-                                                type="text"
-                                                value={sc.useOfFundsDetail}
-                                                onChange={e => updateScenario(sc.id, 'useOfFundsDetail', e.target.value)}
-                                                className="w-full text-xs border border-slate-200 rounded px-2 py-1.5 focus:border-blue-400 outline-none placeholder:text-slate-400"
-                                                placeholder="Specific details..."
-                                            />
-                                        </div>
-                                    </div>
+                                <div className={`p-5 space-y-6 relative ${isLocked ? '' : ''}`}>
 
-                                    {/* Funding Structure */}
-                                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-                                        <h5 className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center gap-2">
-                                            <Coins size={14} /> Project Capital Stack
-                                        </h5>
-                                        <div className="grid grid-cols-3 gap-6">
-                                            <div>
-                                                <label className="block text-xs text-slate-500 mb-1">Requested Amount</label>
-                                                <div className="font-bold text-slate-700">${parseFloat(sc.amount || 0).toLocaleString()}</div>
+                                    {/* Loan Program Selector (Visible only when Locked) */}
+                                    {isLocked && (
+                                        <div className="mb-6 p-4 bg-emerald-50 rounded-xl border border-emerald-100 animate-in fade-in slide-in-from-top-2">
+                                            <label className="block text-xs font-bold text-emerald-800 uppercase mb-2 flex items-center gap-2">
+                                                <BadgeCheck size={14} /> Select Loan Program (Required)
+                                            </label>
+                                            <select
+                                                value={sc.loan_program_id || ''}
+                                                onChange={(e) => updateLoanProgram(sc.id, e.target.value)}
+                                                className="w-full bg-white border border-emerald-200 text-emerald-900 text-sm font-bold rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent shadow-sm appearance-none"
+                                            >
+                                                <option value="" disabled>-- Select Eligible Loan Program --</option>
+                                                {programs.map(prog => (
+                                                    <option key={prog.id} value={prog.id}>
+                                                        {prog.name} ({prog.rate})
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <p className="text-[10px] text-emerald-600 mt-2 font-medium">
+                                                Selecting a program maps this scenario to specific underwriting criteria.
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {/* Inputs: Disabled State Styling Logic */}
+                                    <div className={`transition-all ${isLocked ? 'opacity-60 pointer-events-none grayscale-[0.5]' : ''}`}>
+                                        {/* Terms & Use */}
+                                        <div className="grid grid-cols-12 gap-6">
+                                            <div className="col-span-3">
+                                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Term (Mos)</label>
+                                                <input
+                                                    type="number"
+                                                    value={sc.term}
+                                                    disabled={isLocked}
+                                                    onChange={e => updateScenario(sc.id, 'term', e.target.value)}
+                                                    className="w-full text-sm font-bold text-slate-700 border border-slate-200 rounded-lg px-3 py-2 focus:border-blue-500 outline-none disabled:bg-slate-50"
+                                                />
                                             </div>
-                                            <div>
-                                                <label className="block text-xs text-slate-500 mb-1">Owner Contrib.</label>
-                                                <div className="flex items-center gap-1">
-                                                    <span className="text-slate-400 text-sm">$</span>
-                                                    <input
-                                                        type="number"
-                                                        value={sc.ownerContribution}
-                                                        onChange={e => updateScenario(sc.id, 'ownerContribution', e.target.value)}
-                                                        className="w-full text-sm font-bold bg-transparent border-b border-slate-300 focus:border-blue-500 outline-none"
-                                                    />
+                                            <div className="col-span-9">
+                                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5">Use of Funds</label>
+                                                <div className="flex flex-wrap gap-2 mb-2">
+                                                    {USE_OF_FUNDS_OPTIONS.map(opt => (
+                                                        <button
+                                                            key={opt}
+                                                            disabled={isLocked}
+                                                            onClick={() => toggleUseOfFunds(sc.id, opt)}
+                                                            className={`px-2.5 py-1 rounded-md text-xs font-bold border transition-all ${sc.useOfFunds?.includes(opt) ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'} disabled:opacity-80`}
+                                                        >
+                                                            {opt}
+                                                        </button>
+                                                    ))}
                                                 </div>
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs text-slate-500 mb-1">Other Funding</label>
-                                                <div className="flex items-center gap-1">
-                                                    <span className="text-slate-400 text-sm">$</span>
-                                                    <input
-                                                        type="number"
-                                                        value={sc.otherFunding}
-                                                        onChange={e => updateScenario(sc.id, 'otherFunding', e.target.value)}
-                                                        className="w-full text-sm font-bold bg-transparent border-b border-slate-300 focus:border-blue-500 outline-none"
-                                                    />
-                                                </div>
+                                                <input
+                                                    type="text"
+                                                    value={sc.useOfFundsDetail}
+                                                    disabled={isLocked}
+                                                    onChange={e => updateScenario(sc.id, 'useOfFundsDetail', e.target.value)}
+                                                    className="w-full text-xs border border-slate-200 rounded px-2 py-1.5 focus:border-blue-400 outline-none placeholder:text-slate-400 disabled:bg-slate-50"
+                                                    placeholder="Specific details..."
+                                                />
                                             </div>
                                         </div>
-                                        <div className="mt-3 pt-3 border-t border-slate-200 flex justify-between items-end">
-                                            <span className="text-xs text-slate-400 font-medium">Total Scenario Cost</span>
-                                            <span className="text-sm font-black text-slate-800">${projectCost.toLocaleString()}</span>
+
+                                        {/* Funding Structure */}
+                                        <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 mt-6">
+                                            <h5 className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center gap-2">
+                                                <Coins size={14} /> Project Capital Stack
+                                            </h5>
+                                            <div className="grid grid-cols-3 gap-6">
+                                                <div>
+                                                    <label className="block text-xs text-slate-500 mb-1">Requested Amount</label>
+                                                    <div className="font-bold text-slate-700">${parseFloat(sc.amount || 0).toLocaleString()}</div>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs text-slate-500 mb-1">Owner Contrib.</label>
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="text-slate-400 text-sm">$</span>
+                                                        <input
+                                                            type="number"
+                                                            value={sc.ownerContribution}
+                                                            disabled={isLocked}
+                                                            onChange={e => updateScenario(sc.id, 'ownerContribution', e.target.value)}
+                                                            className="w-full text-sm font-bold bg-transparent border-b border-slate-300 focus:border-blue-500 outline-none disabled:border-transparent"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs text-slate-500 mb-1">Other Funding</label>
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="text-slate-400 text-sm">$</span>
+                                                        <input
+                                                            type="number"
+                                                            value={sc.otherFunding}
+                                                            disabled={isLocked}
+                                                            onChange={e => updateScenario(sc.id, 'otherFunding', e.target.value)}
+                                                            className="w-full text-sm font-bold bg-transparent border-b border-slate-300 focus:border-blue-500 outline-none disabled:border-transparent"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="mt-3 pt-3 border-t border-slate-200 flex justify-between items-end">
+                                                <span className="text-xs text-slate-400 font-medium">Total Scenario Cost</span>
+                                                <span className="text-sm font-black text-slate-800">${projectCost.toLocaleString()}</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

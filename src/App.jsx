@@ -22,6 +22,8 @@ import TemplateEditor from './components/Marketing/Templates/TemplateEditor';
 import RecipientPreview from './components/Marketing/Templates/RecipientPreview';
 import CampaignWizard from './components/Marketing/Campaigns/CampaignWizard';
 import { Plus, LayoutGrid, BarChart3 } from 'lucide-react';
+import { hydrateLoanApplication } from './utils/loanHydration';
+import { programs } from './data/loanPrograms';
 
 function App() {
   console.log('App Rendering (Full Restoration)');
@@ -128,7 +130,47 @@ function App() {
       totalSteps: 5,
       insights: { hasWarning: false, blockers: [], lastActivity: 'Borrower uploaded tax returns (1h ago)', quickActions: ['Review Docs'] },
       steps: [{ id: 1, text: 'Review 2022 Tax Returns', due: 'Today', urgency: 'high', completed: false }],
-      notifications: []
+      notifications: [],
+      application: {
+        isHydrated: true,
+        conversionDate: '2023-11-20T10:00:00Z',
+        facilities: [
+          {
+            id: 'fac_jenkins_001',
+            status: 'Proposed',
+            programSourceId: 'LP-001',
+            programVersion: '1.0',
+            programName: 'SBA 7(a) Standard',
+            requestAmount: 85000,
+            termMonths: 120,
+            interestRate: {
+              baseIndex: 'Prime',
+              spread: 2.25,
+              display: 'Prime + 2.25%',
+              isSystemLocked: true
+            },
+            useOfFunds: [
+              { category: 'Inventory', amount: 50000, description: 'Bulk food purchase' },
+              { category: 'Equipment', amount: 35000, description: 'New ovens' }
+            ],
+            compliance: {
+              maxLTV: 80,
+              minDSCR: 1.15
+            }
+          }
+        ],
+        riskRating: {
+          overallScore: 78,
+          status: 'ACTIVE',
+          dimensions: [
+            { key: 'character', label: 'Character & Management', score: 8, weight: 0.20 },
+            { key: 'capacity', label: 'Capacity (Cash Flow)', score: 7, weight: 0.30 },
+            { key: 'capital', label: 'Capital (Equity)', score: 8, weight: 0.20 },
+            { key: 'collateral', label: 'Collateral Coverage', score: 7, weight: 0.20 },
+            { key: 'conditions', label: 'Market Conditions', score: 9, weight: 0.10 }
+          ]
+        }
+      }
     },
     {
       id: 'LN-2023-001',
@@ -195,14 +237,24 @@ function App() {
     // 1. Update Lead Stage
     handleUpdateLead(leadId, { stage: 'Converted' });
 
-    // 2. Create New Loan
+    // 2. Hydrate New Loan
+    // Get locked scenarios (assuming logic from LeadDetail ensures validity before we get here)
+    const lockedScenarios = (lead.fundingScenarios || []).filter(s => s.locked);
+
+    // In a real app we might throw if no locked scenarios, but for prototype we can be soft or fallback
+    // The UI button is disabled if validation fails, so we can assume valid state here mostly.
+
+    const partialLoanData = hydrateLoanApplication(lead, lockedScenarios, programs);
+
     const newLoanId = `LN-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+
+    // Merge hydrate data with ID and other App-level constructs
     const newLoan = {
       id: newLoanId,
       applicantName: lead.businessName || lead.name,
       industry: 'General', // Would come from lead details
       purpose: 'Working Capital', // Default or from lead
-      amount: lead.value || '$0',
+      // amount: lead.value || '$0', // Overwritten by partialLoanData.amount
       status: 'Pending',
       progress: 10,
       stageName: 'Application',
@@ -210,7 +262,8 @@ function App() {
       totalSteps: 5,
       insights: { hasWarning: false, blockers: [], lastActivity: 'Converted from Lead (Just now)', quickActions: ['Initial Review'] },
       steps: [{ id: 1, text: 'Initial Application Review', due: 'Pending', urgency: 'medium', completed: false }],
-      notifications: []
+      notifications: [],
+      ...partialLoanData // Apply hydrated fields (amount, application structure, etc.)
     };
 
     setLoans(prev => [newLoan, ...prev]);
@@ -218,10 +271,10 @@ function App() {
     // 3. Navigate to Loan
     setSelectedLoanDetail(newLoan);
     setSelectedLoanId(newLoan.id);
-    setActiveTab('loans-overview'); // Switch to main loans view? Or 'loans-pipeline'?
+    setActiveTab('loans-overview');
 
     // Optional: Show toast here if we had one
-    console.log(`[CONVERSION] Lead ${leadId} converted to Loan ${newLoanId}`);
+    console.log(`[CONVERSION] Lead ${leadId} converted to Loan ${newLoanId} with ${newLoan.application.facilities.length} facilities.`);
   };
 
   const [leads, setLeads] = useState([

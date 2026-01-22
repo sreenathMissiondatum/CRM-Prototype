@@ -43,6 +43,7 @@ const LeadsLayout = ({
                         onUpdateFilters={onUpdateFilters}
                         onImportLeads={onImportLeads}
                         onBulkUpdate={onBulkUpdate}
+                        onUpdateLead={onUpdateLead}
                     />
                 </div>
             ) : (

@@ -17,6 +17,8 @@ import { useState } from 'react';
 import CreditCommitteeModal from './CreditCommitteeModal';
 import CreditCommitteeReviewTab from './CreditCommitteeReviewTab';
 import ClosingTab from './ClosingTab';
+import LoanApplicationDetails from './LoanApplicationDetails';
+import RiskRatingsTab from './RiskRatingsTab';
 
 const LoanDetail = ({ loan, onBack, onViewAccount, onViewContact, user }) => {
     // Data for Detail View
@@ -439,7 +441,7 @@ const LoanDetail = ({ loan, onBack, onViewAccount, onViewContact, user }) => {
                         {/* Tabs */}
                         <div className="flex gap-2 mb-6 border-b border-slate-200 pb-1">
                             {[
-                                'Summary', 'Borrower', 'Financials', 'Documents', 'Activities', 'Collateral',
+                                'Summary', 'Details', 'Risk', 'Borrower', 'Financials', 'Documents', 'Activities', 'Collateral',
                                 ...(
                                     // Visible to Credit Officer OR (Alex Morgan/LO when Approved/Denied)
                                     (
@@ -530,6 +532,14 @@ const LoanDetail = ({ loan, onBack, onViewAccount, onViewContact, user }) => {
                                     </div>
                                 </div>
                             </div>
+                        )}
+
+                        {activeTab === 'Details' && (
+                            <LoanApplicationDetails loan={loan} />
+                        )}
+
+                        {activeTab === 'Risk' && (
+                            <RiskRatingsTab loan={loan} />
                         )}
 
                         {activeTab === 'Borrower' && (

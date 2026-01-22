@@ -55,7 +55,176 @@ const LoansList = ({ onSelectLoan, viewMode = 'loans' }) => {
                 amount: 85000,
                 amountFormatted: '$85,000',
                 date: '2023-12-09T09:00:00',
-                officer: 'Sarah M'
+                officer: 'Sarah M',
+                application: {
+                    isHydrated: true,
+                    conversionDate: '2023-11-20T10:00:00Z',
+                    entityType: 'LLC',
+                    taxId: 'XX-XXX1234',
+                    formationDate: '2015-04-12',
+
+                    // 9) Business Background
+                    businessBackground: {
+                        FTEs_created_count: 5
+                    },
+
+                    // 6) Existing Loans - Business
+                    existingLoansBusiness: {
+                        amtExistLoans_bus_apl: 120000,
+                        dServExistLoans_mo_bus_apl: 1500,
+                        existLoans_reason_bus_apl: 'Previous expansion loan',
+                        schedExistLoans_bus_apl: 'Attached',
+                        existLoans_bus_apl_yn: true // derived
+                    },
+
+                    // 7) Existing Loans - Household (per contact)
+                    existingLoansHousehold: [
+                        {
+                            contactId: 'contact_001',
+                            name: 'Sarah Jenkins',
+                            amtExistLoans_hhd_apl_contX: 15000,
+                            dServExistLoans_mo_hhd_apl_contX: 450,
+                            existLoans_reason_hhd_apl_contX: 'Car Loan',
+                            schedExistLoans_hhd_apl_contX: 'Credit Report'
+                        }
+                    ],
+
+                    facilities: [
+                        {
+                            id: 'fac_jenkins_001',
+                            programName: 'SBA 7(a) Equipment',
+
+                            // 1) Loan Terms
+                            loan_terms: {
+                                loanProduct_fX: 'SBA 7(a)',
+                                amtLoan_fX: 65000,
+                                termLoan_mo_fX: 120,
+                                payFrequency_fX: 'Monthly',
+                                payAmt_mo_fX: 721.50 // derived/mocked
+                            },
+
+                            // 2) Payment Terms
+                            payment_terms: {
+                                firstPay_date_fX: '2024-01-01',
+                                maturity_date_fX: '2033-12-31',
+                                gracePeriod_mo_fX: 0,
+                                amortizationType_fX: 'Principal + Interest',
+                                amortizationMethod_fX: 'Fully Amortizing'
+                            },
+
+                            // 3) Sources & Uses
+                            sourcesUsesOfFunds: {
+                                useFunds_fX: ['Equipment'],
+                                useFunds_detail_fX: 'Kitchen upgrade',
+                                ownerFunds_amt_fX: 5000,
+                                ownerFunds_detail_fX: 'Cash',
+                                otherFunds_amt_fX: 0,
+                                otherFunds_detail_fX: 'N/A',
+                                projectCost_total_fX: 70000,
+
+                                // Configurable Breakdown
+                                equipment_useFunds_fX: 65000,
+                                inventory_useFunds_fX: 0,
+                                wrkCapital_useFunds_fX: 0,
+                                realEstate_useFunds_fX: 0,
+                                refinance_useFunds_fX: 0,
+                                other_useFunds_fX: 0,
+                                otherDetail_useFunds_fX: ''
+                            },
+
+                            // 4) Interest & Fees
+                            interest_fees: {
+                                interestRate_fX: 6.5,
+                                interestRate_type_fX: 'Fixed',
+                                prepaymentPenalty_fX: '5/4/3/2/1',
+                                originationFee_amt_fX: 1950,
+                                originationFee_prcntg_fX: 3.00,
+                                feesTotalClosing_fX: 1950
+                            },
+
+                            // 5) Collateral
+                            collateral: [
+                                {
+                                    id: 'col_001',
+                                    type_collatX_fX: 'UCC-1 Equipment',
+                                    discontNetAmt_collatX_fX: 65000,
+                                    ID_collatX_fX: 'COL-EQ1'
+                                }
+                            ]
+                        },
+                        {
+                            id: 'fac_jenkins_002',
+                            programName: 'Working Capital Loan',
+
+                            // 1) Loan Terms
+                            loan_terms: {
+                                loanProduct_fX: 'Working Capital',
+                                amtLoan_fX: 10000,
+                                termLoan_mo_fX: 24,
+                                payFrequency_fX: 'Monthly',
+                                payAmt_mo_fX: 85.00 // interest only approx
+                            },
+
+                            // 2) Payment Terms
+                            payment_terms: {
+                                firstPay_date_fX: '2024-01-01',
+                                maturity_date_fX: '2025-12-31',
+                                gracePeriod_mo_fX: 0,
+                                amortizationType_fX: 'Interest Only',
+                                amortizationMethod_fX: 'Interest Only'
+                            },
+
+                            // 3) Sources & Uses
+                            sourcesUsesOfFunds: {
+                                useFunds_fX: ['Working Capital'],
+                                useFunds_detail_fX: 'Payroll buffer',
+                                ownerFunds_amt_fX: 0,
+                                ownerFunds_detail_fX: 'N/A',
+                                otherFunds_amt_fX: 0,
+                                otherFunds_detail_fX: 'N/A',
+                                projectCost_total_fX: 10000,
+
+                                // Configurable Breakdown
+                                equipment_useFunds_fX: 0,
+                                inventory_useFunds_fX: 0,
+                                wrkCapital_useFunds_fX: 10000,
+                                realEstate_useFunds_fX: 0,
+                                refinance_useFunds_fX: 0,
+                                other_useFunds_fX: 0,
+                                otherDetail_useFunds_fX: ''
+                            },
+
+                            // 4) Interest & Fees
+                            interest_fees: {
+                                interestRate_fX: 10.2, // Higher rate for WC
+                                interestRate_type_fX: 'Variable',
+                                prepaymentPenalty_fX: 'None',
+                                originationFee_amt_fX: 250,
+                                originationFee_prcntg_fX: 2.50,
+                                feesTotalClosing_fX: 250
+                            },
+
+                            // 5) Collateral
+                            collateral: [
+                                {
+                                    id: 'col_002',
+                                    type_collatX_fX: 'UCC-1 Blanket',
+                                    discontNetAmt_collatX_fX: 0,
+                                    ID_collatX_fX: 'COL-BL1'
+                                }
+                            ]
+                        }
+                    ],
+
+                    // 8) Facility Sums (Derived placeholders)
+                    derived: {
+                        amtLoan_fALL: 85000,
+                        payAmt_mo_fALL: 943.50,
+                        feesTotalClosing_fALL: 2500,
+                        discontNetAmt_collatALL_fALL: 50000,
+                        LTV_collateral_apl: 58.8 // 50k / 85k * 100
+                    }
+                }
             },
             {
                 id: 'LN-2345',

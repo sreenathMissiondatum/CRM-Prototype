@@ -23,7 +23,7 @@ import { CANONICAL_CONTACTS } from '../../data/canonicalContacts';
 import { MOCK_ACCOUNTS, MOCK_CONTACTS } from '../../data/mockReferralData';
 import { deriveCensusData } from '../../utils/censusUtils';
 
-const LeadDetailsTab = ({ lead, readOnly }) => {
+const LeadDetailsTab = ({ lead, readOnly, onUpdateLead }) => {
     // --- State: Sections Expansion ---
     const [sections, setSections] = useState({
         system: false,
@@ -103,7 +103,7 @@ const LeadDetailsTab = ({ lead, readOnly }) => {
                 city: 'Detroit',
                 state: 'MI',
                 zip: '48201',
-                website: 'www.jenkinscatering.com', // Consolidated here
+
                 // Census Data (Moved from Industry)
                 censusTract: '48201223100', // Initial Mock
                 isLowIncome: true,
@@ -236,6 +236,11 @@ const LeadDetailsTab = ({ lead, readOnly }) => {
             }
         }));
         setIsDirty(true);
+
+        // Sync Intent validation state to parent immediately
+        if (section === 'intent' && field === 'fundingScenarios' && onUpdateLead) {
+            onUpdateLead(lead.id, { fundingScenarios: value });
+        }
     };
 
     // --- Effect: Derive Census Data from ZIP ---
@@ -968,6 +973,7 @@ const LeadDetailsTab = ({ lead, readOnly }) => {
                 onToggle={() => toggleSection('intent')}
                 formData={formData.intent}
                 onUpdateScenarios={(scenarios) => handleChange('intent', 'fundingScenarios', scenarios)}
+                onAudit={auditLog}
             />
 
             {/* S7: Borrowing History */}

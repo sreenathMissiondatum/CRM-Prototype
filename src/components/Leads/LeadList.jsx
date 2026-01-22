@@ -15,9 +15,10 @@ import { createPortal } from 'react-dom';
 import LeadFilterDrawer from './LeadFilterDrawer';
 import ImportLeadsModal from './ImportLeadsModal';
 import BulkUpdateModal from './BulkUpdateModal';
+import ReassignLOModal from './ReassignLOModal';
 import { downloadLeadTemplate } from '../../utils/leadTemplateUtils';
 
-const LeadList = ({ leads, selectedLeadId, onSelectLead, onCreateLead, compact, currentFilters, onUpdateFilters, onImportLeads, onBulkUpdate }) => {
+const LeadList = ({ leads, selectedLeadId, onSelectLead, onCreateLead, compact, currentFilters, onUpdateFilters, onImportLeads, onBulkUpdate, onUpdateLead }) => {
     // State
     const [activeStage, setActiveStage] = useState('All');
     const [isImportModalOpen, setIsImportModalOpen] = useState(false); // Import Modal State
@@ -28,6 +29,8 @@ const LeadList = ({ leads, selectedLeadId, onSelectLead, onCreateLead, compact, 
     const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false); // New "More" Menu
     const [isColumnManagerOpen, setIsColumnManagerOpen] = useState(false); // New Manager Modal
     const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false); // Restored Drawer
+    const [isReassignModalOpen, setIsReassignModalOpen] = useState(false);
+    const [leadForReassign, setLeadForReassign] = useState(null);
     const [selectedIds, setSelectedIds] = useState(new Set());
     const [sortConfig, setSortConfig] = useState({ key: 'lastActivity', direction: 'desc' }); // Updated Sort State
     const [activeRowMenu, setActiveRowMenu] = useState(null); // Track open row menu ID
@@ -179,6 +182,21 @@ const LeadList = ({ leads, selectedLeadId, onSelectLead, onCreateLead, compact, 
         setSortConfig({ key, label });
         setIsSortMenuOpen(false);
         setCurrentPage(1);
+    };
+
+    // --- REASSIGN HANDLER ---
+    const handleReassignLead = (newOfficer) => {
+        if (!leadForReassign) return;
+
+        // Optimistic Update / Callback
+        if (onUpdateLead) {
+            onUpdateLead(leadForReassign.id, {
+                assignedOfficer: newOfficer.name
+            });
+        }
+
+        alert("Loan Officer reassigned successfully.");
+        setLeadForReassign(null);
     };
 
     // Filter & Sort
@@ -603,6 +621,15 @@ const LeadList = ({ leads, selectedLeadId, onSelectLead, onCreateLead, compact, 
                         }}
                     />
 
+                    {/* Reassign LO Modal */}
+                    <ReassignLOModal
+                        isOpen={isReassignModalOpen}
+                        onClose={() => setIsReassignModalOpen(false)}
+                        onConfirm={handleReassignLead}
+                        currentOfficerId={leadForReassign?.assignedOfficer}
+                        leadName={leadForReassign?.name}
+                    />
+
                     {/* Grid Table Container */}
                     <div className="flex flex-col relative rounded-b-2xl overflow-hidden bg-white">
                         <div className="overflow-x-auto custom-scrollbar">
@@ -861,7 +888,11 @@ const LeadList = ({ leads, selectedLeadId, onSelectLead, onCreateLead, compact, 
                                                                                             <button className="w-full text-left px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 rounded flex items-center gap-2" onClick={() => setActiveRowMenu(null)}>
                                                                                                 <Pencil size={13} className="text-slate-400" /> Edit Lead
                                                                                             </button>
-                                                                                            <button className="w-full text-left px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 rounded flex items-center gap-2" onClick={() => setActiveRowMenu(null)}>
+                                                                                            <button className="w-full text-left px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 rounded flex items-center gap-2" onClick={() => {
+                                                                                                setActiveRowMenu(null);
+                                                                                                setLeadForReassign(lead);
+                                                                                                setIsReassignModalOpen(true);
+                                                                                            }}>
                                                                                                 <UserCog size={13} className="text-slate-400" /> Reassign LO
                                                                                             </button>
                                                                                             <button className="w-full text-left px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 rounded flex items-center gap-2" onClick={() => setActiveRowMenu(null)}>

@@ -15,6 +15,7 @@ import TaskDrawer from '../Tasks/TaskDrawer';
 import LoanProgramSelector from '../LoanPrograms/LoanProgramSelector';
 import LeadStateChevron from './LeadStateChevron';
 import LeadStateControl from './LeadStateControl';
+import ReassignLOModal from './ReassignLOModal';
 import { MOCK_USERS, getAssignedUser } from '../../data/mockUsers';
 
 
@@ -71,6 +72,7 @@ const LeadDetail = ({ lead, onBack, onViewAccount, onViewContact, onUpdateLead, 
         // Standard Lifecycle Transition
         // 1. Log Audit
         const auditLog = {
+            // eslint-disable-next-line
             eventId: `evt_${Date.now()}`,
             leadId: lead.id,
             previousStage: currentLeadStage,
@@ -129,7 +131,37 @@ const LeadDetail = ({ lead, onBack, onViewAccount, onViewContact, onUpdateLead, 
         });
 
         // 5. Close Modal
+        // 5. Close Modal
         setCloseLeadModal(null);
+    };
+
+    const handleConvertLeadClick = () => {
+        // Validation for Scenarios
+        const scenarios = lead.fundingScenarios || [];
+
+        // Rule 1: At least one scenario exists
+        if (scenarios.length === 0) {
+            alert("Cannot Convert: At least one Funding Scenario is required.");
+            return;
+        }
+
+        // Rule 2: At least one Scenario is LOCKED
+        const lockedScenarios = scenarios.filter(s => s.status === 'Locked');
+        if (lockedScenarios.length === 0) {
+            alert("Cannot Convert: You must lock at least one Funding Scenario before converting.");
+            return;
+        }
+
+        // Rule 3: Every LOCKED Scenario has a Loan Program selected
+        const invalidLocked = lockedScenarios.find(s => !s.loan_program_id);
+        if (invalidLocked) {
+            alert(`Cannot Convert: Scenario "${invalidLocked.name}" is locked but has no Loan Program selected. Please select a program.`);
+            return;
+        }
+
+        // Proceed
+        setIsMenuOpen(false);
+        if (onConvertLead) onConvertLead(lead.id);
     };
 
     // Lifted Document State
@@ -266,8 +298,9 @@ const LeadDetail = ({ lead, onBack, onViewAccount, onViewContact, onUpdateLead, 
     const handleLogActivity = (newActivity) => {
         // Transform the generic drawer activity into the specific shape expected by ActivityCard
         const activityRecord = {
+
             id: Date.now(), // Mock ID
-            type: 'system', // Default to system if not specified? Or keep dynamic.
+
             // If it's a reassignment, we want to show it clearly.
             ...newActivity,
             type: newActivity.type || 'call',
@@ -284,18 +317,10 @@ const LeadDetail = ({ lead, onBack, onViewAccount, onViewContact, onUpdateLead, 
 
     // --- ASSIGNED TO LOGIC ---
     const assignedUser = getAssignedUser(lead.assignedOfficer);
-    const [isReassignOpen, setIsReassignOpen] = useState(false);
-    const assignRef = useRef(null);
+    const [isReassignModalOpen, setIsReassignModalOpen] = useState(false);
+    // const assignRef = useRef(null); // Removed ref as modal manages focus/click-outside
 
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (assignRef.current && !assignRef.current.contains(event.target)) {
-                setIsReassignOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+    // Removed old click outside effect for popover
 
     const handleReassign = (user) => {
         if (!onUpdateLead) return;
@@ -308,7 +333,8 @@ const LeadDetail = ({ lead, onBack, onViewAccount, onViewContact, onUpdateLead, 
             summary: `Lead ownership transferred from ${lead.assignedOfficer} to ${user.name}`,
             notes: `Assigned to ${user.name} (${user.role})`
         });
-        setIsReassignOpen(false);
+        alert("Loan Officer reassigned successfully.");
+        setIsReassignModalOpen(false);
     };
 
     const tabs = [
@@ -339,7 +365,7 @@ const LeadDetail = ({ lead, onBack, onViewAccount, onViewContact, onUpdateLead, 
             // Create New Nudge Logic
             const newNudge = {
                 timestamp: now.toISOString(),
-                taskId: `TASK-${Math.floor(Math.random() * 10000)}`,
+                taskId: `TASK - ${Math.floor(Math.random() * 10000)}`,
                 taskTitle: `Request document: ${doc.name}`,
                 sentBy: 'System'
             };
@@ -363,7 +389,7 @@ const LeadDetail = ({ lead, onBack, onViewAccount, onViewContact, onUpdateLead, 
         setDocuments(prev => prev.map(doc => {
             if (doc.id === docId) {
                 const newVersion = {
-                    id: `v${(doc.versions?.length || 0) + 1}`,
+                    id: `v${(doc.versions?.length || 0) + 1} `,
                     version: (doc.versions?.length || 0) + 1,
                     filename: filename,
                     size: fileSize,
@@ -378,7 +404,7 @@ const LeadDetail = ({ lead, onBack, onViewAccount, onViewContact, onUpdateLead, 
                         status: 'review',
                         versions: [newVersion, ...(doc.versions || [])],
                         reviewTask: {
-                            id: `rt_${Date.now()}`,
+                            id: `rt_${Date.now()} `,
                             assignedTo: uploadData.reviewer === 'sarah' ? 'Sarah Miller' : 'Mike Ross', // Mock lookup
                             assignedToAvatar: uploadData.reviewer === 'sarah' ? 'SM' : 'MR',
                             dueDate: 'Tomorrow', // Default
@@ -411,7 +437,7 @@ const LeadDetail = ({ lead, onBack, onViewAccount, onViewContact, onUpdateLead, 
                 ...doc,
                 status: 'review',
                 reviewTask: {
-                    id: `rt_${Date.now()}`,
+                    id: `rt_${Date.now()} `,
                     assignedTo: 'Sarah Miller',
                     assignedToAvatar: assignee.toUpperCase().slice(0, 2),
                     dueDate: 'Tomorrow',
@@ -427,7 +453,7 @@ const LeadDetail = ({ lead, onBack, onViewAccount, onViewContact, onUpdateLead, 
         if (!name) return;
 
         const newDoc = {
-            id: `d${Date.now()}`,
+            id: `d${Date.now()} `,
             name: name,
             category: 'Supporting Documents',
             required: true,
@@ -461,7 +487,7 @@ const LeadDetail = ({ lead, onBack, onViewAccount, onViewContact, onUpdateLead, 
         const docName = document?.name || "Document";
         const fullTask = {
             id: task.id,
-            title: `Review ${docName}`,
+            title: `Review ${docName} `,
             status: task.status,
             priority: 'Normal',
             assignedTo: task.assignedTo,
@@ -616,12 +642,12 @@ const LeadDetail = ({ lead, onBack, onViewAccount, onViewContact, onUpdateLead, 
                                 <div className="h-10 w-px bg-slate-200 mx-2 hidden sm:block"></div>
 
                                 {/* Assigned To Field */}
-                                <div className="relative hidden sm:block" ref={assignRef}>
+                                <div className="relative hidden sm:block">
                                     <label className="text-[10px] uppercase tracking-wider font-bold text-slate-400 mb-0.5 block">
                                         Assigned To
                                     </label>
                                     <button
-                                        onClick={() => setIsReassignOpen(!isReassignOpen)}
+                                        onClick={() => setIsReassignModalOpen(true)}
                                         className="flex items-center gap-2 hover:bg-slate-50 p-1 -ml-1 rounded transition-colors group"
                                     >
                                         <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold border border-indigo-200">
@@ -640,41 +666,7 @@ const LeadDetail = ({ lead, onBack, onViewAccount, onViewContact, onUpdateLead, 
                                         </div>
                                     </button>
 
-                                    {/* Reassignment Dropdown */}
-                                    {isReassignOpen && (
-                                        <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-100 z-50 animate-in fade-in zoom-in-95 duration-200">
-                                            <div className="px-3 py-2 border-b border-slate-100 bg-slate-50 rounded-t-xl">
-                                                <span className="text-xs font-bold text-slate-500 uppercase">Reassign Lead</span>
-                                            </div>
-                                            <div className="max-h-64 overflow-y-auto p-1">
-                                                {MOCK_USERS.filter(u => u.name !== 'System').map(user => (
-                                                    <button
-                                                        key={user.id}
-                                                        onClick={() => handleReassign(user)}
-                                                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors text-left ${user.name === assignedUser.name
-                                                            ? 'bg-blue-50 text-blue-700'
-                                                            : 'text-slate-700 hover:bg-slate-50'
-                                                            }`}
-                                                    >
-                                                        <div className="w-8 h-8 rounded-full bg-slate-100 overflow-hidden shrink-0 border border-slate-200">
-                                                            {user.avatar ? (
-                                                                <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
-                                                            ) : (
-                                                                <div className="w-full h-full flex items-center justify-center text-xs font-bold text-slate-500">
-                                                                    {user.name.charAt(0)}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        <div>
-                                                            <div className="font-medium">{user.name}</div>
-                                                            <div className="text-xs text-slate-400">{user.role}</div>
-                                                        </div>
-                                                        {user.name === assignedUser.name && <SquareCheck size={14} className="ml-auto" />}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
+
                                 </div>
                             </div>
                         </div>
@@ -688,7 +680,7 @@ const LeadDetail = ({ lead, onBack, onViewAccount, onViewContact, onUpdateLead, 
 
                             <button
                                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                                className={`p-1.5 rounded transition-all ${isMenuOpen ? 'bg-blue-50 text-blue-600 ring-2 ring-blue-100' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}
+                                className={`p - 1.5 rounded transition - all ${isMenuOpen ? 'bg-blue-50 text-blue-600 ring-2 ring-blue-100' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'} `}
                             >
                                 <EllipsisVertical size={18} />
                             </button>
@@ -712,7 +704,10 @@ const LeadDetail = ({ lead, onBack, onViewAccount, onViewContact, onUpdateLead, 
                                     </div>
                                     <div className="h-px bg-slate-100 my-1 mx-1"></div>
                                     <div className="p-1">
-                                        <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-lg transition-colors text-left">
+                                        <button
+                                            onClick={handleConvertLeadClick}
+                                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-lg transition-colors text-left"
+                                        >
                                             <ArrowRightFromLine size={14} className="text-slate-400" /> Convert to Loan Application
                                         </button>
                                         <button
@@ -747,10 +742,10 @@ const LeadDetail = ({ lead, onBack, onViewAccount, onViewContact, onUpdateLead, 
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
-                                className={`pb-3 text-sm font-medium transition-all relative ${activeTab === tab.id
+                                className={`pb - 3 text - sm font - medium transition - all relative ${activeTab === tab.id
                                     ? 'text-blue-600'
                                     : 'text-slate-500 hover:text-slate-700'
-                                    }`}
+                                    } `}
                             >
                                 {tab.label}
                                 {activeTab === tab.id && (
@@ -791,6 +786,7 @@ const LeadDetail = ({ lead, onBack, onViewAccount, onViewContact, onUpdateLead, 
                             key={lead.id}
                             lead={lead}
                             readOnly={isReadOnly}
+                            onUpdateLead={onUpdateLead}
                         />
                     )}
 
@@ -930,6 +926,15 @@ const LeadDetail = ({ lead, onBack, onViewAccount, onViewContact, onUpdateLead, 
                     </div>
                 </div>
             )}
+
+            {/* Reassign LO Modal */}
+            <ReassignLOModal
+                isOpen={isReassignModalOpen}
+                onClose={() => setIsReassignModalOpen(false)}
+                onConfirm={handleReassign}
+                currentOfficerId={lead.assignedOfficer}
+                leadName={lead.name}
+            />
         </div>
     );
 };
@@ -939,7 +944,7 @@ class ErrorBoundary extends React.Component {
         this.state = { hasError: false, error: null, errorInfo: null };
     }
 
-    static getDerivedStateFromError(error) {
+    static getDerivedStateFromError(_) {
         return { hasError: true };
     }
 

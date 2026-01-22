@@ -6,7 +6,7 @@ import {
     ArrowLeft, ShieldCheck, AlertCircle,
     TrendingUp, Briefcase, Building2, User,
     CircleCheck, TriangleAlert, Plus, SquarePen, RefreshCw, X, MoreHorizontal, MousePointerClick,
-    Ban, ShieldAlert
+    Ban, ShieldAlert, BadgeCheck
 } from 'lucide-react';
 import CallPrimaryWidget from '../Shared/CallPrimaryWidget';
 import LeadBorrowerSnapshot from './LeadBorrowerSnapshot';
@@ -297,34 +297,31 @@ const LeadSummaryView = ({ lead, assignedPrograms = [], onUpdateAssignedPrograms
                 {/* Left Column (2/3) */}
                 <div className="xl:col-span-2 space-y-6">
 
-                    {/* 3. Loan Intent */}
+                    {/* 3. Funding Scenarios Summary */}
                     <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col gap-0 relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-50 to-transparent rounded-bl-full -mr-10 -mt-10 pointer-events-none"></div>
-
 
                         <div className="flex flex-col md:flex-row gap-6 relative z-10">
                             <div className="flex-1 space-y-4">
                                 <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                                     <TrendingUp size={20} className="text-blue-600" />
-                                    Loan Request
+                                    Funding Overview
                                 </h3>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <div className="text-xs text-slate-500 uppercase tracking-wide">Amount</div>
-                                        <div className="text-2xl font-bold text-slate-900">{data.loanAmount}</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-xs text-slate-500 uppercase tracking-wide">Timeline</div>
-                                        <div className="text-base font-medium text-amber-600 flex items-center gap-1">
-                                            <Clock size={14} />
-                                            {data.timeline}
+                                        <div className="text-xs text-slate-500 uppercase tracking-wide">Total Requested</div>
+                                        <div className="text-2xl font-bold text-slate-900">
+                                            {/* Calculate Total from Scenarios */}
+                                            ${(lead.fundingScenarios || []).reduce((acc, s) => acc + (parseFloat(s.amount) || 0), 0).toLocaleString()}
                                         </div>
                                     </div>
-                                </div>
-                                <div>
-                                    <div className="text-xs text-slate-500 uppercase tracking-wide mb-1">Purpose</div>
-                                    <div className="font-medium text-slate-800">{data.loanPurpose}</div>
-                                    <div className="text-sm text-slate-500 mt-1">{data.purposeDetail}</div>
+                                    <div>
+                                        <div className="text-xs text-slate-500 uppercase tracking-wide">Scenarios</div>
+                                        <div className="text-base font-medium text-slate-700 flex items-center gap-1">
+                                            <BadgeCheck size={16} className="text-blue-500" />
+                                            {(lead.fundingScenarios || []).length} Active
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -336,87 +333,55 @@ const LeadSummaryView = ({ lead, assignedPrograms = [], onUpdateAssignedPrograms
                                         {data.readinessLevel}
                                     </div>
                                 </div>
-                                <div>
-                                    <div className="text-xs text-slate-500 mb-1">Active TA Client?</div>
-                                    <div className="font-medium text-slate-700 flex items-center gap-2">
-                                        {data.isTaClient ? (
-                                            <><CircleCheck size={16} className="text-emerald-500" /> Yes</>
-                                        ) : 'No'}
-                                    </div>
-                                </div>
                             </div>
                         </div>
 
+                        {/* Scenarios List (Read Only) */}
+                        <div className="pt-4 mt-4 border-t border-slate-100 relative z-10">
+                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+                                <ShieldCheck size={14} className="text-blue-500" /> Scenarios & Programs
+                            </h4>
 
-
-                        {/* Lending Decision Section (Merged into Loan Intent Card or Separate?) - Going inside Intent for context */}
-                        <div className="pt-4 mt-4 border-t border-slate-100 flex flex-col md:flex-row gap-6 items-start relative z-10">
-                            <div className="flex-1">
-                                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2 flex items-center gap-2">
-                                    <ShieldCheck size={14} className="text-blue-500" /> Lending Decision
-                                </h4>
-
-                                {!assignedPrograms || assignedPrograms.length === 0 ? (
-                                    <div className="bg-slate-50 result-item rounded-lg p-4 border border-slate-200 border-dashed flex flex-col items-center justify-center gap-2 group hover:border-blue-300 transition-colors py-6">
-                                        <div className="p-2 bg-white rounded-full text-slate-400 mb-1 border border-slate-100 shadow-sm">
-                                            <MousePointerClick size={20} />
-                                        </div>
-                                        <div className="text-sm text-slate-500 italic text-center">No loan programs selected.<br />Assign eligible programs for this request.</div>
-                                        <button
-                                            onClick={() => setIsProgramSelectorOpen(true)}
-                                            className="mt-2 text-xs font-bold bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors shadow-sm shadow-blue-200 flex items-center gap-2"
-                                        >
-                                            <Plus size={14} /> Assign Program(s)
-                                        </button>
-                                    </div>
+                            <div className="space-y-3">
+                                {(!lead.fundingScenarios || lead.fundingScenarios.length === 0) ? (
+                                    <div className="text-sm text-slate-400 italic">No funding scenarios created yet.</div>
                                 ) : (
-                                    <div className="space-y-3">
-                                        <div className="flex justify-between items-center px-1">
-                                            <div className="text-xs font-bold text-slate-500 uppercase tracking-wide">
-                                                Selected Loan Programs ({assignedPrograms.length})
-                                            </div>
-                                            <button
-                                                onClick={() => setIsProgramSelectorOpen(true)}
-                                                className="text-[10px] font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
-                                            >
-                                                + Add More
-                                            </button>
-                                        </div>
+                                    lead.fundingScenarios.map((sc, idx) => {
+                                        const isLocked = sc.status === 'Locked';
+                                        const programName = isLocked
+                                            ? (programs.find(p => p.id === sc.loan_program_id)?.name || 'Unknown Program')
+                                            : 'Not Selected';
 
-                                        <div className="space-y-2">
-                                            {assignedPrograms.map(progId => {
-                                                const prog = programs.find(p => p.id === progId);
-                                                if (!prog) return null;
-                                                return (
-                                                    <SelectedProgramCard
-                                                        key={prog.id}
-                                                        program={prog}
-                                                        onViewDetails={(p) => setSelectedProgramForDetails(p)}
-                                                        onViewDocs={(p) => setSelectedProgramForDocs(p)}
-                                                        onRemove={(id) => {
-                                                            if (confirm('Remove this program from the Lead? This does not affect the Loan Program definition.')) {
-                                                                handleRemoveProgram(id);
-                                                            }
-                                                        }}
-                                                    />
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
+                                        return (
+                                            <div key={sc.id || idx} className={`p-3 rounded-lg border flex justify-between items-center ${isLocked ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-200 border-dashed'}`}>
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-xs font-bold text-slate-700">{sc.name}</span>
+                                                        {isLocked && <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold uppercase">Locked</span>}
+                                                    </div>
+                                                    <div className="text-xs text-slate-500 mt-0.5">
+                                                        {isLocked ? (
+                                                            <span className="flex items-center gap-1 text-emerald-700 font-medium">
+                                                                <BadgeCheck size={10} /> {programName}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-slate-400 italic">Draft - No Program Assigned</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-sm font-bold text-slate-800">${parseFloat(sc.amount || 0).toLocaleString()}</div>
+                                                    <div className="text-[10px] text-slate-400">{sc.term} mos</div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })
                                 )}
-                            </div>
-                            <div className="w-full md:w-48 hidden md:block">
-                                {/* Spacer to align with right column of intent card if needed, or just leave empty */}
                             </div>
                         </div>
                     </div>
 
-                    <LoanProgramSelector
-                        isOpen={isProgramSelectorOpen}
-                        onClose={() => setIsProgramSelectorOpen(false)}
-                        onSelect={handleProgramSelect}
-                        currentProgramIds={assignedPrograms}
-                    />
+                    {/* Old LoanProgramSelector usage removed */}
 
                     {/* 2. Borrower Snapshot (Lead Specific) */}
                     <LeadBorrowerSnapshot

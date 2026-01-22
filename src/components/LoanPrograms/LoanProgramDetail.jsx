@@ -74,12 +74,14 @@ const LoanProgramDetail = ({ program, onBack }) => {
                     </div>
                 </div>
                 <div className="flex gap-3">
-                    <button className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 hover:text-red-600 transition-colors">
-                        Retire Program
-                    </button>
-                    <button className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm shadow-blue-200 flex items-center gap-2">
-                        <Edit3 size={16} /> Create New Version
-                    </button>
+                    {/* MVP: Actions are handled in the List View Kebab Menu for lifecycle management. 
+                        Detail view is primarily Read-Only for Active/Retired. 
+                    */}
+                    {program.status === 'Draft' && (
+                        <button className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm shadow-blue-200 flex items-center gap-2">
+                            <Edit3 size={16} /> Edit Configuration
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -144,7 +146,7 @@ const LoanProgramDetail = ({ program, onBack }) => {
                                     <Shield size={20} className="text-blue-500" />
                                     Eligibility Rules (LOS)
                                 </h2>
-                                <button className="text-xs font-bold text-blue-600 hover:text-blue-800 uppercase tracking-wide">Edit Rules</button>
+                                {/* <button className="text-xs font-bold text-blue-600 hover:text-blue-800 uppercase tracking-wide">Edit Rules</button> */}
                             </div>
                             <div className="p-6 space-y-6">
                                 <div>
@@ -185,7 +187,7 @@ const LoanProgramDetail = ({ program, onBack }) => {
                                     <FileText size={20} className="text-amber-500" />
                                     Required Documents
                                 </h2>
-                                <button className="text-xs font-bold text-blue-600 hover:text-blue-800 uppercase tracking-wide">Configure</button>
+                                {/* <button className="text-xs font-bold text-blue-600 hover:text-blue-800 uppercase tracking-wide">Configure</button> */}
                             </div>
                             <div className="divide-y divide-slate-50">
                                 {losConfig.documents.map(doc => (

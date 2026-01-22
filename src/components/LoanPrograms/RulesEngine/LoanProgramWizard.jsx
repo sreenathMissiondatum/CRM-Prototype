@@ -3,7 +3,7 @@ import {
     Briefcase, Landmark, Shield, Wallet, Percent, Banknote,
     FileText, CheckCircle2, AlertTriangle, Info, MapPin,
     Globe, Building2, Lock, ChevronRight, ChevronLeft, Save,
-    Scale, ScrollText, Check
+    Scale, ScrollText, Check, Hammer, Box, RefreshCw, PlusCircle, Target, TrendingUp
 } from 'lucide-react';
 
 // --- CONFIGURATION & SCHEMA ---
@@ -70,7 +70,8 @@ const LoanProgramWizard = ({ initialData, onSave, onCancel }) => {
         minAmount: '', maxAmount: '', maxTerm: '', balloonAllowed: false,
         baseRateIndex: null, maxSpreadLogic: null, accrualMethod: null, feeWaiverLogic: null, feeDisclosure: false,
         collateralThreshold: '', maxLtvRealEstate: '', guarantyPercentage: '', guarantorEquityThreshold: '',
-        creditElsewhere: false, refinanceAllowed: false
+        minLendingYield: '',
+        creditElsewhere: false, refinanceAllowed: false, allowedUses: []
     });
 
     const activeTheme = THEMES[currentStep];
@@ -220,14 +221,7 @@ const LoanProgramWizard = ({ initialData, onSave, onCancel }) => {
                                 </div>
                             </div>
                         </PolicyCard>
-                        <PolicyCard title="Configuration Control">
-                            <ToggleTile
-                                label="Active Status"
-                                description="When active, this program will appear in the origination wizard for all eligible loan officers."
-                                checked={formData.active}
-                                onChange={v => handleChange('active', v)}
-                            />
-                        </PolicyCard>
+
                     </div>
                 );
             case 2: // Regulatory
@@ -300,6 +294,63 @@ const LoanProgramWizard = ({ initialData, onSave, onCancel }) => {
                                 <MapPin size={18} className="mr-2" /> Geographic visualizer placeholder
                             </div>
                         </PolicyCard>
+                        <PolicyCard title="Allowable Use of Proceeds">
+                            <div className="mb-4 text-sm text-slate-500 font-medium">
+                                Define what this loan’s capital may be used for. These rules act as a hard gate for applications.
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                {[
+                                    { id: 'Working Capital', icon: Briefcase, desc: 'Opex, Payroll, Rent' },
+                                    { id: 'Equipment', icon: Hammer, desc: 'Machinery, Vehicles' },
+                                    { id: 'Inventory', icon: Box, desc: 'Stock, Raw Materials' },
+                                    { id: 'Real Estate', icon: Building2, desc: 'Purchase, Reno' },
+                                    { id: 'Refinance', icon: RefreshCw, desc: 'Debt Consolidation' },
+                                    { id: 'Other', icon: PlusCircle, desc: 'Special Purpose' }
+                                ].map(use => {
+                                    const isSelected = formData.allowedUses.includes(use.id);
+                                    return (
+                                        <button
+                                            key={use.id}
+                                            onClick={() => {
+                                                const newUses = isSelected
+                                                    ? formData.allowedUses.filter(u => u !== use.id)
+                                                    : [...formData.allowedUses, use.id];
+
+                                                // Refinance Logic Coupling
+                                                let updates = { allowedUses: newUses };
+                                                if (use.id === 'Refinance') {
+                                                    updates.refinanceAllowed = !isSelected;
+                                                }
+                                                // Sync Refinance flag if deselected via other means? 
+                                                // For now, explicit click controls it.
+
+                                                setFormData(prev => ({ ...prev, ...updates }));
+                                            }}
+                                            className={`
+                                                relative flex flex-col items-start p-4 rounded-xl border transition-all text-left
+                                                ${isSelected
+                                                    ? 'bg-teal-50 border-teal-500 ring-1 ring-teal-500 shadow-sm'
+                                                    : 'bg-white border-slate-200 hover:border-teal-300 hover:shadow-md'
+                                                }
+                                            `}
+                                        >
+                                            <div className={`p-2 rounded-lg mb-3 ${isSelected ? 'bg-teal-200 text-teal-800' : 'bg-slate-100 text-slate-500'}`}>
+                                                <use.icon size={20} />
+                                            </div>
+                                            <div className={`font-bold text-sm mb-0.5 ${isSelected ? 'text-teal-900' : 'text-slate-700'}`}>{use.id}</div>
+                                            <div className="text-xs text-slate-400 font-medium">{use.desc}</div>
+
+                                            {isSelected && (
+                                                <div className="absolute top-3 right-3 text-teal-600">
+                                                    <CheckCircle2 size={16} fill="currentColor" className="text-white" />
+                                                </div>
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </PolicyCard>
+
                         <PolicyCard title="Credit Gates">
                             <div className="mb-6">
                                 <div className="flex justify-between mb-2">
@@ -420,6 +471,34 @@ const LoanProgramWizard = ({ initialData, onSave, onCancel }) => {
                                 placeholder="Actual/360"
                                 helper="Controls daily interest math and payment calculation."
                             />
+                        </PolicyCard>
+                        <PolicyCard title="Yield & Pricing Safeguards">
+                            <div className="flex items-start gap-3 mb-4">
+                                <TrendingUp className="text-emerald-600 mt-1" size={20} />
+                                <div>
+                                    <div className="text-sm font-bold text-slate-800">Minimum Lending Yield</div>
+                                    <div className="text-xs text-slate-500 max-w-sm leading-relaxed mt-0.5">
+                                        Loan pricing must result in an effective yield at or above this threshold.
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="w-48">
+                                    <TextInput
+                                        label="Min Yield Threshold"
+                                        suffix="%"
+                                        placeholder="0.000"
+                                        value={formData.minLendingYield}
+                                        onChange={v => handleChange('minLendingYield', v)}
+                                    />
+                                </div>
+                                {formData.minLendingYield && (
+                                    <div className="bg-emerald-50 border border-emerald-100 rounded-lg px-4 py-2 flex items-center gap-2 text-xs font-bold text-emerald-700 mt-2">
+                                        <Shield size={14} />
+                                        <span>Protection Active</span>
+                                    </div>
+                                )}
+                            </div>
                         </PolicyCard>
                     </div>
                 );
@@ -649,6 +728,17 @@ const LoanProgramWizard = ({ initialData, onSave, onCancel }) => {
                                 <SnapshotRow label="Min SBSS" value={formData.minSbss} />
                             </div>
                         )}
+                        {formData.allowedUses.length > 0 && (
+                            <div className="p-4 rounded-xl bg-teal-50/50 border border-teal-100">
+                                <div className="text-[10px] font-bold uppercase text-teal-400 mb-2">Allowed Uses</div>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {formData.allowedUses.map(u => (
+                                        <span key={u} className="px-2 py-0.5 bg-white border border-teal-200 rounded text-[10px] font-bold text-teal-700 shadow-sm">{u}</span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         {(formData.minAmount || formData.maxAmount) && (
                             <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-100">
                                 <div className="text-[10px] font-bold uppercase text-emerald-400 mb-2">Structure</div>
@@ -661,6 +751,7 @@ const LoanProgramWizard = ({ initialData, onSave, onCancel }) => {
                                 <div className="text-[10px] font-bold uppercase text-violet-400 mb-2">Pricing</div>
                                 <SnapshotRow label="Index" value={formData.baseRateIndex} />
                                 <SnapshotRow label="Spread" value={formData.maxSpreadLogic} />
+                                <SnapshotRow label="Min Yield" value={formData.minLendingYield ? `${formData.minLendingYield}%` : null} />
                             </div>
                         )}
                         {formData.collateralThreshold && (
