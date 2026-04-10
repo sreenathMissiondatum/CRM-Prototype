@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
     FileText, ShieldCheck, History, Edit3, Lock,
     AlertCircle, CheckCircle2, ChevronDown, ChevronRight,
-    Plus, Trash2, DollarSign, Calculator, Save, RefreshCw
+    Plus, Trash2, DollarSign, Calculator, Save, RefreshCw,
+    Eye, EyeOff
 } from 'lucide-react';
 
 const LoanApplicationDetails = ({ loan, onUpdate }) => {
@@ -18,7 +19,20 @@ const LoanApplicationDetails = ({ loan, onUpdate }) => {
     const LEAD_REQUESTED_AMOUNT = 75000;
 
     // Derived State (Auto-Calculated)
+    // Derived State (Auto-Calculated)
     const [derived, setDerived] = useState(formData.derived || {});
+    // Per-facility derived state
+    const [derivedFacilities, setDerivedFacilities] = useState({});
+
+    // Masking State
+    const [visibleFields, setVisibleFields] = useState({});
+
+    const toggleFieldVisibility = (fieldId) => {
+        setVisibleFields(prev => ({
+            ...prev,
+            [fieldId]: !prev[fieldId]
+        }));
+    };
 
     // Effect: Recalculate Derived Fields on Form Change
     useEffect(() => {
@@ -32,17 +46,31 @@ const LoanApplicationDetails = ({ loan, onUpdate }) => {
         const amtLoan_fALL = data.facilities.reduce((sum, f) => sum + (Number(f.loan_terms?.amtLoan_fX) || 0), 0);
         const feesTotalClosing_fALL = data.facilities.reduce((sum, f) => sum + (Number(f.interest_fees?.feesTotalClosing_fX) || 0), 0);
 
-        // Mock LTV Calc
-        const totalCollateral = data.facilities.reduce((sum, f) => {
-            return sum + (f.collateral?.reduce((cSum, c) => cSum + (Number(c.discontNetAmt_collatX_fX) || 0), 0) || 0);
-        }, 0);
+        let totalCollateralGlobal = 0;
+        const newDerivedFacilities = {};
 
-        const LTV_collateral_apl = amtLoan_fALL > 0 ? (totalCollateral / amtLoan_fALL) * 100 : 0;
+        data.facilities.forEach((f, idx) => {
+            const facCollateralSum = f.collateral?.reduce((cSum, c) => cSum + (Number(c.discontNetAmt_collatX_fX) || 0), 0) || 0;
+            totalCollateralGlobal += facCollateralSum;
 
+            // Audit Log - Recalculation Event
+            const oldVal = derivedFacilities[idx]?.discontNetAmt_collatALL_fX || 0;
+            if (facCollateralSum !== oldVal && oldVal !== 0) { // Skip init
+                console.log(`[AUDIT] RECALCULATION EVENT | Field: facilities[${idx}].discontNetAmt_collatALL_fX | Old: ${oldVal} | New: ${facCollateralSum} | Actor: System`);
+            }
+
+            newDerivedFacilities[idx] = {
+                discontNetAmt_collatALL_fX: facCollateralSum
+            };
+        });
+
+        const LTV_collateral_apl = amtLoan_fALL > 0 ? (totalCollateralGlobal / amtLoan_fALL) * 100 : 0;
+
+        setDerivedFacilities(newDerivedFacilities);
         setDerived({
             amtLoan_fALL,
             feesTotalClosing_fALL,
-            discontNetAmt_collatALL_fALL: totalCollateral,
+            discontNetAmt_collatALL_fALL: totalCollateralGlobal,
             LTV_collateral_apl,
             payAmt_mo_fALL: 943.50 // Placeholder
         });
@@ -344,6 +372,46 @@ const LoanApplicationDetails = ({ loan, onUpdate }) => {
                                                 <button className="flex items-center gap-2 text-sm font-bold text-blue-600 hover:bg-blue-50 px-3 py-2 rounded transition-colors">
                                                     <Plus size={16} /> Add Collateral
                                                 </button>
+                                            </div>
+
+                                            {/* Mandatory A1 Collateral Summary Section */}
+                                            <div className="mt-8 bg-slate-900 rounded-lg p-6 border border-slate-700">
+                                                <h4 className="text-sm font-bold text-white uppercase tracking-wider mb-4 border-b border-slate-700 pb-2">
+                                                    Collateral Summary (System Derived)
+                                                </h4>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                                    <div className="relative">
+                                                        <div className="flex justify-between items-center mb-1">
+                                                            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                                                                Total Discounted Collateral Value
+                                                            </label>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-700 text-slate-300 border border-slate-600">
+                                                                    <Lock size={8} className="mr-1" /> System Derived
+                                                                </span>
+                                                                <button
+                                                                    onClick={() => toggleFieldVisibility(`collatAll_${idx}`)}
+                                                                    className="text-slate-400 hover:text-white"
+                                                                >
+                                                                    {visibleFields[`collatAll_${idx}`] ? <EyeOff size={14} /> : <Eye size={14} />}
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-2xl font-bold text-emerald-400 font-mono">
+                                                                {visibleFields[`collatAll_${idx}`] ?
+                                                                    `$${derivedFacilities[idx]?.discontNetAmt_collatALL_fX?.toLocaleString()}` :
+                                                                    '•••••••••'
+                                                                }
+                                                            </span>
+                                                        </div>
+                                                        <div className="mt-1 text-xs text-slate-500 font-mono">ID: discontNetAmt_collatALL_f{idx + 1}</div>
+                                                        <div className="mt-1 text-xs text-slate-500">
+                                                            Sum of all discounted collateral values for this facility.
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
 
                                             <div className="mt-4 flex justify-end">

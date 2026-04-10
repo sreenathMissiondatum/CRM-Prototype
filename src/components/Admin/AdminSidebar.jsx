@@ -2,7 +2,7 @@ import React from 'react';
 import {
     Settings, Users, Briefcase, FileText, Activity,
     Plug, Workflow, ShieldAlert, FileCode, List,
-    Bell, Database, ChevronRight, ArrowLeft
+    Bell, Database, ChevronRight, ArrowLeft, Map
 } from 'lucide-react';
 
 const AdminSidebar = ({ activeSection, onSelectSection, onBack, userRole = 'ORG_ADMIN' }) => {
@@ -44,9 +44,11 @@ const AdminSidebar = ({ activeSection, onSelectSection, onBack, userRole = 'ORG_
         },
         {
             title: 'Documents',
+            roles: [ROLES.ORG_ADMIN, ROLES.LO],
             items: [
                 { id: 'doc-templates', label: 'Document Templates', icon: FileText },
-                { id: 'credit-memo', label: 'Credit Memo', icon: FileCode }
+                { id: 'credit-memo', label: 'Credit Memo', icon: FileCode },
+                { id: 'fin-mapping-templates', label: 'Financial Mapping Templates', icon: Map },
             ]
         },
         {

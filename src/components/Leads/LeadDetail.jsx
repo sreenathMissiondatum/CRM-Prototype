@@ -13,6 +13,7 @@ import LeadDetailsTab from './LeadDetailsTab';
 import DocumentReviewTask from '../Tasks/DocumentReviewTask';
 import TaskDrawer from '../Tasks/TaskDrawer';
 import LoanProgramSelector from '../LoanPrograms/LoanProgramSelector';
+import LeadEmailTab from './LeadEmailTab';
 import LeadStateChevron from './LeadStateChevron';
 import LeadStateControl from './LeadStateControl';
 import ReassignLOModal from './ReassignLOModal';
@@ -342,6 +343,7 @@ const LeadDetail = ({ lead, onBack, onViewAccount, onViewContact, onUpdateLead, 
         { id: 'details', label: 'Details' },
         { id: 'activities', label: 'Activities' },
         { id: 'documents', label: 'Documents' },
+        { id: 'email', label: 'Email' },
         { id: 'tasks', label: 'Tasks' },
         { id: 'notes', label: 'Notes' },
     ];
@@ -737,12 +739,13 @@ const LeadDetail = ({ lead, onBack, onViewAccount, onViewContact, onUpdateLead, 
                     </div>
 
                     {/* Tabs */}
+                    {/* Tabs */}
                     <div className="flex gap-6 mt-2 border-b border-slate-100">
                         {tabs.map(tab => (
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
-                                className={`pb - 3 text - sm font - medium transition - all relative ${activeTab === tab.id
+                                className={`pb-3 text-sm font-medium font-sans tracking-tight transition-all relative ${activeTab === tab.id
                                     ? 'text-blue-600'
                                     : 'text-slate-500 hover:text-slate-700'
                                     } `}
@@ -805,6 +808,13 @@ const LeadDetail = ({ lead, onBack, onViewAccount, onViewContact, onUpdateLead, 
                             onViewTask={handleViewTask}
                             onViewNudgeTask={handleViewNudgeTask}
                             onUpsertDocuments={handleUpsertDocuments}
+                        />
+                    )}
+
+                    {activeTab === 'email' && (
+                        <LeadEmailTab
+                            lead={lead}
+                            currentUser={{ name: 'Mike Ross', email: 'mross@myflow.com' }}
                         />
                     )}
 

@@ -16,6 +16,7 @@ import CapitalCommitments from './sections/CapitalCommitments';
 import FundsAndPools from './sections/FundsAndPools';
 import AllocationRules from './sections/AllocationRules';
 import CapitalImpactDashboard from './sections/CapitalImpactDashboard';
+import FinancialMappingTemplates from './sections/FinancialMappingTemplates';
 
 // Temporary placeholders for sections
 const SectionPlaceholder = ({ title }) => (
@@ -67,13 +68,15 @@ const AdminPanel = ({ onBack, userRole }) => {
                 return <FundsAndPools />;
             case 'allocation-rules':
                 return <AllocationRules />;
+            case 'fin-mapping-templates':
+                return <FinancialMappingTemplates userRole={userRole} />;
 
             default:
                 return <SectionPlaceholder title="Settings" />;
         }
     };
 
-    const fullHeightSections = ['loan-programs']; // Sections that handle their own scrolling
+    const fullHeightSections = ['loan-programs', 'fin-mapping-templates'];
     const isFullHeight = fullHeightSections.includes(activeSection);
 
     return (
