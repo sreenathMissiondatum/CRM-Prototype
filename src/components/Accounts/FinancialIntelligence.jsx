@@ -10,6 +10,7 @@ import {
     Archive, ArrowUpRight, ArrowDownRight, Minus, MoreHorizontal, Info, FileSpreadsheet, X
 } from 'lucide-react';
 import TrendEngineTab from './TrendEngineTab';
+import MultiProfileComparison from './MultiProfileComparison';
 
 const TEMPLATES = [
     { id: 'TAX_RETURN', name: 'Tax Return', type: 'STRUCTURED', desc: 'IRS structured classification.', icon: FileText, sections: ['Revenue', 'COGS', 'OpEx', 'Assets', 'Liabilities', 'Equity'] },
@@ -26,6 +27,18 @@ const FinancialIntelligence = ({ accountId = 'ACC-12345', onEditSource }) => {
 
     // Currently Selected Profile ID (defaults to Active 2024)
     const [selectedProfileId, setSelectedProfileId] = useState('active_2024');
+
+    // Multi-select Compare State
+    const [compareMode, setCompareMode] = useState(false);
+    const [selectedCompareProfileIds, setSelectedCompareProfileIds] = useState([]);
+
+    const toggleCompareProfile = (e, id) => {
+        e.stopPropagation();
+        setSelectedCompareProfileIds(prev => 
+            prev.includes(id) ? prev.filter(p => p !== id) 
+            : prev.length < 5 ? [...prev, id] : prev
+        );
+    };
 
     // Section Collapse State
     const [openSections, setOpenSections] = useState({
@@ -639,19 +652,29 @@ const FinancialIntelligence = ({ accountId = 'ACC-12345', onEditSource }) => {
                                                 {expandedSources[sourceKey] && (
                                                     <div className="flex flex-col pb-2">
                                                         {groupedHierarchy[period][sourceType].map(profile => {
-                                                            const isActive = selectedProfileId === profile.id;
+                                                            const isActive = selectedProfileId === profile.id && !compareMode;
+                                                            const isChecked = selectedCompareProfileIds.includes(profile.id);
+                                                            const disableCheck = !isChecked && selectedCompareProfileIds.length >= 5;
                                                             return (
                                                                 <div 
                                                                     key={profile.id}
-                                                                    onClick={() => setSelectedProfileId(profile.id)}
+                                                                    onClick={() => !compareMode && setSelectedProfileId(profile.id)}
                                                                     className={`
                                                                         relative pl-7 pr-4 py-2.5 cursor-pointer transition-all group select-none
-                                                                        ${isActive ? 'bg-blue-50/60' : 'hover:bg-slate-50'}
+                                                                        ${isActive ? 'bg-blue-50/60' : isChecked ? 'bg-blue-50/40' : 'hover:bg-slate-50'}
                                                                     `}
                                                                 >
-                                                                    {isActive && <div className="absolute left-0 top-0 w-1 h-full bg-blue-600 shadow-[2px_0_8px_rgba(37,99,235,0.4)]"></div>}
+                                                                    {!compareMode && isActive && <div className="absolute left-0 top-0 w-1 h-full bg-blue-600 shadow-[2px_0_8px_rgba(37,99,235,0.4)]"></div>}
+                                                                    {compareMode && isChecked && <div className="absolute left-0 top-0 w-1 h-full bg-blue-400"></div>}
                                                                     
-                                                                    <div className="flex justify-between items-start">
+                                                                    {/* Compare Checkbox Override */}
+                                                                    <div className={`absolute left-2.5 top-3 ${compareMode || isChecked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity z-10`} onClick={(e) => disableCheck && !isChecked ? e.stopPropagation() : toggleCompareProfile(e, profile.id)}>
+                                                                        <div className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center transition-colors ${isChecked ? 'bg-blue-600 border-blue-600' : disableCheck ? 'bg-slate-100 border-slate-200 cursor-not-allowed' : 'bg-white border-slate-300 hover:border-blue-500'}`}>
+                                                                            {isChecked && <CheckCircle size={10} className="text-white" />}
+                                                                        </div>
+                                                                    </div>
+                                                                    
+                                                                    <div className={`flex justify-between items-start transition-transform ${compareMode || isChecked ? 'translate-x-2' : 'group-hover:translate-x-1'}`}>
                                                                         <div className="flex flex-col max-w-[12rem]">
                                                                             <div className="flex items-center gap-1.5">
                                                                                 <span className={`text-[11px] font-bold truncate ${isActive ? 'text-blue-800' : 'text-slate-800'}`}>
@@ -719,9 +742,32 @@ const FinancialIntelligence = ({ accountId = 'ACC-12345', onEditSource }) => {
                         </div>
                     ))}
                 </div>
+                
+                {/* STICKY COMPARE CTA */}
+                {selectedCompareProfileIds.length >= 2 && !compareMode && (
+                    <div className="sticky bottom-0 p-4 bg-white border-t border-slate-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-30">
+                        <button 
+                            onClick={() => setCompareMode(true)}
+                            className="w-full py-2.5 bg-slate-900 hover:bg-black text-white font-bold text-sm rounded-lg shadow-md transition-colors flex items-center justify-center gap-2"
+                        >
+                            Compare ({selectedCompareProfileIds.length}) Profiles
+                        </button>
+                    </div>
+                )}
+                {compareMode && (
+                    <div className="sticky bottom-0 p-4 bg-slate-50 border-t border-slate-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-30 flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-500 uppercase">{selectedCompareProfileIds.length}/5 Selected</span>
+                    </div>
+                )}
             </div>
 
-            {/* RIGHT PANEL - CONTEXTUAL DATA */}
+            {/* RIGHT OR COMPARE PANEL */}
+            {compareMode ? (
+                <MultiProfileComparison 
+                    selectedProfiles={profiles.filter(p => selectedCompareProfileIds.includes(p.id))} 
+                    onExit={() => { setCompareMode(false); setSelectedCompareProfileIds([]); }}
+                />
+            ) : (
             <div className="flex-1 min-w-0 overflow-y-auto pb-20">
 
                 {/* 1. HEADER */}
@@ -997,6 +1043,7 @@ const FinancialIntelligence = ({ accountId = 'ACC-12345', onEditSource }) => {
                 </div>
             </div>
             </div>
+            )}
         </div>
     ) : (
         <div className="flex-1 overflow-y-auto w-full">

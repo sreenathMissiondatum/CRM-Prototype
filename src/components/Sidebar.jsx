@@ -18,7 +18,8 @@ import {
     Circle,
     Menu,
     PanelLeftClose,
-    PanelLeftOpen
+    PanelLeftOpen,
+    Hexagon
 } from 'lucide-react';
 import { twMerge } from 'tailwind-merge';
 
@@ -135,6 +136,7 @@ const Sidebar = ({ active, onNavigate, isPinned, onTogglePin, className, userRol
             title: 'Insights',
             items: [
                 { id: 'reports', icon: BarChart3, label: 'Reports' },
+                { id: 'honeycomb-builder', icon: Hexagon, label: 'Honeycomb Builder' }
             ]
         }
     ];

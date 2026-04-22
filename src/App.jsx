@@ -21,6 +21,7 @@ import TemplateUpload from './components/Marketing/Templates/TemplateUpload';
 import TemplateEditor from './components/Marketing/Templates/TemplateEditor';
 import RecipientPreview from './components/Marketing/Templates/RecipientPreview';
 import CampaignWizard from './components/Marketing/Campaigns/CampaignWizard';
+import HoneycombLayout from './components/Insights/HoneycombBuilder/HoneycombLayout';
 import { Plus, LayoutGrid, BarChart3 } from 'lucide-react';
 import { hydrateLoanApplication } from './utils/loanHydration';
 import { programs } from './data/loanPrograms';
@@ -335,7 +336,11 @@ function App() {
         <Header onNavigate={setActiveTab} user={currentUser} onSwitchUser={handleSwitchUser} />
 
         <div className="relative flex-1 flex flex-col min-h-0">
-          {activeTab === 'loan-programs' ? (
+          {activeTab === 'honeycomb-builder' ? (
+            <div className="h-full w-full">
+              <HoneycombLayout />
+            </div>
+          ) : activeTab === 'loan-programs' ? (
             <LoanProgramRulesEngine />
           ) : activeTab === 'account-detail' ? (
             <AccountDetail
