@@ -99,13 +99,13 @@ const RuleMatrix = ({ feature, onUpdateFeature }) => {
     };
 
     const getHeatmapColor = (score) => {
-        if (score === '' || score === undefined || score === null) return 'bg-[#1e293b] text-slate-500';
+        if (score === '' || score === undefined || score === null) return 'bg-white text-slate-400';
         const num = parseFloat(score);
         if (num <= 1.0) return 'bg-[#0f3b39] text-[#4ade80]';
         if (num <= 2.0) return 'bg-[#14532d] text-[#22c55e]';
         if (num <= 3.0) return 'bg-[#4d7c0f] text-[#a3e635]';
-        if (num <= 4.0) return 'bg-[#ca8a04] text-white';
-        if (num <= 5.0) return 'bg-[#b45309] text-white';
+        if (num <= 4.0) return 'bg-[#ca8a04] text-slate-900';
+        if (num <= 5.0) return 'bg-[#b45309] text-slate-900';
         if (num <= 7.0) return 'bg-[#9a3412] text-rose-200';
         return 'bg-[#7f1d1d] text-rose-400';
     };
@@ -118,10 +118,10 @@ const RuleMatrix = ({ feature, onUpdateFeature }) => {
     const renderListMode = () => {
         const colAttr = attributes[0];
         return (
-            <div className="flex-1 overflow-y-auto custom-scrollbar border border-[#334155] rounded bg-[#0f172a] p-4">
+            <div className="flex-1 overflow-y-auto custom-scrollbar border border-slate-200 rounded bg-slate-50 p-4">
                 <table className="w-full text-left table-auto">
                     <thead>
-                        <tr className="border-b border-[#334155] text-[10px] text-slate-400 uppercase tracking-widest">
+                        <tr className="border-b border-slate-200 text-[10px] text-slate-400 uppercase tracking-widest">
                             <th className="pb-2">{colAttr.name}</th>
                             <th className="pb-2 text-center w-32">Configured Score</th>
                             <th className="pb-2 text-center w-24">Suggested</th>
@@ -133,8 +133,8 @@ const RuleMatrix = ({ feature, onUpdateFeature }) => {
                             const conds = { [colAttr.id]: cb.id };
                             const rule = getRuleForCombination(conds);
                             return (
-                                <tr key={cb.id} className="border-b border-[#334155]/50 last:border-0 cursor-pointer hover:bg-[#1e293b] transition-colors" onClick={() => setSelectedCell(conds)}>
-                                    <td className="py-3 text-xs font-bold text-slate-300">{cb.label} <span className="text-[10px] text-slate-500 font-normal ml-2">({cb.min} - {cb.max})</span></td>
+                                <tr key={cb.id} className="border-b border-slate-200/50 last:border-0 cursor-pointer hover:bg-white transition-colors" onClick={() => setSelectedCell(conds)}>
+                                    <td className="py-3 text-xs font-bold text-slate-700">{cb.label} <span className="text-[10px] text-slate-400 font-normal ml-2">({cb.min} - {cb.max})</span></td>
                                     <td className="py-2 text-center">
                                         <input 
                                             type="number" step="0.1"
@@ -165,11 +165,11 @@ const RuleMatrix = ({ feature, onUpdateFeature }) => {
         const rowAttr = activeAxes.length > 1 ? activeAxes[1] : null;
 
         return (
-            <div className="border border-[#334155] rounded-lg shadow-sm bg-[#0f172a] overflow-hidden flex-1 flex flex-col">
+            <div className="border border-slate-200 rounded-lg shadow-sm bg-slate-50 overflow-hidden flex-1 flex flex-col">
                 <table className="w-full text-left border-collapse table-fixed h-full min-h-[250px]">
                     <thead>
                         <tr>
-                            <th className="p-3 bg-[#1e293b] border-b border-r border-[#334155] text-center w-[160px]">
+                            <th className="p-3 bg-white border-b border-r border-slate-200 text-center w-[160px]">
                                 {rowAttr ? (
                                     <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400">
                                         <span className="truncate">{rowAttr.name}</span>
@@ -181,7 +181,7 @@ const RuleMatrix = ({ feature, onUpdateFeature }) => {
                                 )}
                             </th>
                             {colAttr.bins.map(cb => (
-                                <th key={cb.id} className="p-2 bg-[#1e293b] border-b border-l border-[#334155] text-[10px] font-bold text-slate-400 text-center leading-tight">
+                                <th key={cb.id} className="p-2 bg-white border-b border-l border-slate-200 text-[10px] font-bold text-slate-400 text-center leading-tight">
                                     {cb.label}
                                 </th>
                             ))}
@@ -191,7 +191,7 @@ const RuleMatrix = ({ feature, onUpdateFeature }) => {
                         {rowAttr ? (
                             rowAttr.bins.map(rb => (
                                 <tr key={rb.id}>
-                                    <td className="p-2 border-b border-r border-[#334155] bg-[#1e293b] text-[10px] font-bold text-slate-300 text-center leading-tight">
+                                    <td className="p-2 border-b border-r border-slate-200 bg-white text-[10px] font-bold text-slate-700 text-center leading-tight">
                                         {rb.label}
                                     </td>
                                     {colAttr.bins.map(cb => {
@@ -205,7 +205,7 @@ const RuleMatrix = ({ feature, onUpdateFeature }) => {
                                         const hasDeviation = rule && rule.modelSuggestedScore && Math.abs(rule.propensityScore - rule.modelSuggestedScore) >= 1.0;
 
                                         return (
-                                            <td key={cb.id} className="p-0 border-b border-l border-[#334155] relative group cursor-pointer" onClick={() => setSelectedCell(conds)}>
+                                            <td key={cb.id} className="p-0 border-b border-l border-slate-200 relative group cursor-pointer" onClick={() => setSelectedCell(conds)}>
                                                 {/* Cell Overlays */}
                                                 {(isLowSample || hasDeviation) && (
                                                     <div className="absolute top-1 left-1 flex gap-0.5 pointer-events-none">
@@ -229,7 +229,7 @@ const RuleMatrix = ({ feature, onUpdateFeature }) => {
                             ))
                         ) : (
                             <tr>
-                                <td colSpan={colAttr.bins.length + 1} className="text-center text-slate-500 text-xs italic py-8">
+                                <td colSpan={colAttr.bins.length + 1} className="text-center text-slate-400 text-xs italic py-8">
                                     Unexpected mode routing error. 
                                 </td>
                             </tr>
@@ -243,9 +243,9 @@ const RuleMatrix = ({ feature, onUpdateFeature }) => {
     const renderClassMode = () => {
         // Table mode for dense configurations (3 or 4 dimensions)
         return (
-            <div className="flex-1 overflow-y-auto custom-scrollbar border border-[#334155] rounded bg-[#0f172a]">
+            <div className="flex-1 overflow-y-auto custom-scrollbar border border-slate-200 rounded bg-slate-50">
                 <table className="w-full text-left table-fixed">
-                    <thead className="bg-[#1e293b] sticky top-0 z-10 border-b border-[#334155]">
+                    <thead className="bg-white sticky top-0 z-10 border-b border-slate-200">
                         <tr className="text-[9px] text-slate-400 uppercase tracking-widest">
                             <th className="py-3 px-3 w-28">Rule ID</th>
                             <th className="py-3 px-3">Combinations (Conditions)</th>
@@ -260,7 +260,7 @@ const RuleMatrix = ({ feature, onUpdateFeature }) => {
 
                             return (
                                 <tr key={rule.ruleId} 
-                                    className={`border-b border-[#334155]/50 last:border-0 hover:bg-[#1e293b]/70 cursor-pointer transition-colors ${isActive ? 'bg-[#1e293b]' : ''} ${isFallback ? 'bg-[#1e293b]/30' : ''}`}
+                                    className={`border-b border-slate-200/50 last:border-0 hover:bg-white/70 cursor-pointer transition-colors ${isActive ? 'bg-white' : ''} ${isFallback ? 'bg-white/30' : ''}`}
                                     onClick={() => setSelectedCell(rule.conditions)}
                                 >
                                     <td className="py-2.5 px-3">
@@ -279,7 +279,7 @@ const RuleMatrix = ({ feature, onUpdateFeature }) => {
                                                     if (!attr) return null;
                                                     const bin = attr.bins.find(b => b.id === binId);
                                                     return (
-                                                        <span key={attrId} className="px-1.5 py-0.5 rounded border border-[#334155] bg-[#0f172a] text-[9px] text-slate-300" title={`${attr.name}: ${bin?.label}`}>
+                                                        <span key={attrId} className="px-1.5 py-0.5 rounded border border-slate-200 bg-slate-50 text-[9px] text-slate-700" title={`${attr.name}: ${bin?.label}`}>
                                                             {attr.name.substring(0,6)}.. = {bin?.label}
                                                         </span>
                                                     );
@@ -305,7 +305,7 @@ const RuleMatrix = ({ feature, onUpdateFeature }) => {
 
                         {rules.length === 0 && (
                             <tr>
-                                <td colSpan="4" className="py-10 text-center text-slate-500 italic text-sm">
+                                <td colSpan="4" className="py-10 text-center text-slate-400 italic text-sm">
                                     No rules defined for these parameters. Run "Generate All" to instantiate matrix logic.
                                 </td>
                             </tr>
@@ -322,18 +322,18 @@ const RuleMatrix = ({ feature, onUpdateFeature }) => {
 
     if (activeMode === 'EMPTY') {
         return (
-            <div className="bg-[#1e293b] border border-[#334155] rounded-xl flex items-center justify-center p-5 shadow-lg h-[400px]">
-                <p className="text-sm font-medium text-slate-500 italic">Select a feature to configure Intelligence Engine rules.</p>
+            <div className="bg-white border border-slate-200 rounded-xl flex items-center justify-center p-5 shadow-lg h-[400px]">
+                <p className="text-sm font-medium text-slate-400 italic">Select a feature to configure Intelligence Engine rules.</p>
             </div>
         );
     }
 
     if (isOverLimit) {
         return (
-            <div className="bg-[#1e293b] border border-rose-500/50 rounded-xl flex items-center justify-center p-5 shadow-lg h-[400px]">
+            <div className="bg-white border border-rose-500/50 rounded-xl flex items-center justify-center p-5 shadow-lg h-[400px]">
                 <div className="text-center max-w-md">
                     <AlertTriangle size={32} className="text-rose-500 mx-auto mb-3" />
-                    <h3 className="text-sm font-bold text-white mb-2">Architectural Guardrail Errror</h3>
+                    <h3 className="text-sm font-bold text-slate-900 mb-2">Architectural Guardrail Errror</h3>
                     <p className="text-xs text-rose-300">Feature exceeds maximum dimensionality bounds (4 Attributes max). Combinatorial explosion will degrade performance. Split this logic into distinct modular features.</p>
                 </div>
             </div>
@@ -341,16 +341,16 @@ const RuleMatrix = ({ feature, onUpdateFeature }) => {
     }
 
     return (
-        <div className="bg-[#1e293b] border border-[#334155] rounded-xl shadow-lg flex flex-col w-full h-[550px]">
+        <div className="bg-white border border-slate-200 rounded-xl shadow-lg flex flex-col w-full h-[550px]">
             {/* Context Header */}
-            <div className="flex items-center justify-between border-b border-[#334155] p-5 shrink-0">
+            <div className="flex items-center justify-between border-b border-slate-200 p-5 shrink-0">
                 <div className="flex items-center gap-4">
                     <div>
                         <h2 className="text-[10px] font-bold text-[#3b82f6] uppercase tracking-widest flex items-center gap-2 mb-1">
-                            5. Rules & Scores <span className="text-slate-500 font-normal lowercase">(Dynamic Engine)</span>
+                            5. Rules & Scores <span className="text-slate-400 font-normal lowercase">(Dynamic Engine)</span>
                         </h2>
                         <div className="flex items-center text-[11px] text-slate-400 font-bold overflow-hidden">
-                            ... <span className="mx-1 shrink-0">/</span> {feature.featureName} <span className="mx-1 shrink-0">/</span> <span className="text-slate-300">Statistical Matrix</span>
+                            ... <span className="mx-1 shrink-0">/</span> {feature.featureName} <span className="mx-1 shrink-0">/</span> <span className="text-slate-700">Statistical Matrix</span>
                         </div>
                     </div>
                     {isComplex && (
@@ -372,10 +372,10 @@ const RuleMatrix = ({ feature, onUpdateFeature }) => {
 
             {/* Projection Selector (For Complex features) */}
             {isComplex && (
-                <div className="bg-[#0f172a] border-b border-[#334155] px-5 py-3 flex items-center gap-4 shrink-0">
+                <div className="bg-slate-50 border-b border-slate-200 px-5 py-3 flex items-center gap-4 shrink-0">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1"><ExternalLink size={12}/> Projection Target</span>
                     <select 
-                        className="bg-[#1e293b] border border-[#334155] rounded text-xs text-slate-300 px-3 py-1.5 outline-none font-bold"
+                        className="bg-white border border-slate-200 rounded text-xs text-slate-700 px-3 py-1.5 outline-none font-bold"
                         value={projectionAttributeId || ''}
                         onChange={(e) => {
                             const val = e.target.value;
@@ -394,9 +394,9 @@ const RuleMatrix = ({ feature, onUpdateFeature }) => {
 
                     {projectionAttributeId && (
                         <>
-                            <span className="text-slate-500 font-bold">=</span>
+                            <span className="text-slate-400 font-bold">=</span>
                             <select 
-                                className="bg-[#1e293b] border border-[#334155] rounded text-xs text-blue-400 px-3 py-1.5 outline-none font-bold"
+                                className="bg-white border border-slate-200 rounded text-xs text-blue-400 px-3 py-1.5 outline-none font-bold"
                                 value={projectionBinId || ''}
                                 onChange={(e) => setProjectionBinId(e.target.value)}
                             >
@@ -414,22 +414,22 @@ const RuleMatrix = ({ feature, onUpdateFeature }) => {
                 
                 {/* Active Attributes Legend */}
                 <div className="w-[180px] shrink-0 flex flex-col gap-4">
-                    <div className="flex border border-[#334155] rounded-md overflow-hidden text-[10px] font-bold text-slate-300 bg-[#0f172a]">
-                        <div className={`flex-1 py-1.5 text-center flex items-center justify-center gap-1 ${activeMode === 'RULE_CLASS' ? 'bg-[#1e293b] text-blue-400 border-b-2 border-blue-500' : ''}`}>
+                    <div className="flex border border-slate-200 rounded-md overflow-hidden text-[10px] font-bold text-slate-700 bg-slate-50">
+                        <div className={`flex-1 py-1.5 text-center flex items-center justify-center gap-1 ${activeMode === 'RULE_CLASS' ? 'bg-white text-blue-400 border-b-2 border-blue-500' : ''}`}>
                             <List size={12}/> Rule Class
                         </div>
-                        <div className={`flex-1 py-1.5 text-center flex items-center justify-center gap-1 ${(activeMode === 'MATRIX' || activeMode === 'MATRIX_PROJECTION' || activeMode === 'LIST') ? 'bg-[#1e293b] text-blue-400 border-b-2 border-blue-500' : ''}`}>
+                        <div className={`flex-1 py-1.5 text-center flex items-center justify-center gap-1 ${(activeMode === 'MATRIX' || activeMode === 'MATRIX_PROJECTION' || activeMode === 'LIST') ? 'bg-white text-blue-400 border-b-2 border-blue-500' : ''}`}>
                             <Grid size={12}/> Matrix
                         </div>
                     </div>
 
-                    <div className="flex-1 bg-[#0f172a] border border-[#334155] rounded p-3 overflow-y-auto custom-scrollbar">
-                        <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 border-b border-[#334155] pb-2">Active Attributes ({attributes.length})</h4>
+                    <div className="flex-1 bg-slate-50 border border-slate-200 rounded p-3 overflow-y-auto custom-scrollbar">
+                        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-200 pb-2">Active Attributes ({attributes.length})</h4>
                         <div className="space-y-3 mb-6">
                             {attributes.map((attr, idx) => (
                                 <div key={attr.id} className={`flex flex-col text-[10px] p-1.5 rounded border ${projectionAttributeId === attr.id ? 'bg-blue-500/10 border-blue-500/30' : 'border-transparent'}`}>
                                     <span className="text-blue-400 font-bold mb-0.5">A{idx+1} [ {attr.sourceVariable} ]</span>
-                                    <span className="text-slate-300 truncate" title={attr.name}>{attr.name}</span>
+                                    <span className="text-slate-700 truncate" title={attr.name}>{attr.name}</span>
                                 </div>
                             ))}
                         </div>
@@ -460,20 +460,20 @@ const RuleMatrix = ({ feature, onUpdateFeature }) => {
                 </div>
 
                 {/* DECISION INTELLIGENCE INSPECTOR */}
-                <div className="w-[260px] shrink-0 bg-[#0f172a] border border-[#334155] rounded p-4 flex flex-col relative overflow-hidden">
+                <div className="w-[260px] shrink-0 bg-slate-50 border border-slate-200 rounded p-4 flex flex-col relative overflow-hidden">
                     <div className="absolute top-[-50px] right-[-50px] w-32 h-32 bg-blue-500/10 blur-3xl rounded-full pointer-events-none"></div>
-                    <h4 className="text-[10px] font-bold text-[#3b82f6] uppercase tracking-widest border-b border-[#334155] pb-2 mb-3 flex items-center gap-2">
+                    <h4 className="text-[10px] font-bold text-[#3b82f6] uppercase tracking-widest border-b border-slate-200 pb-2 mb-3 flex items-center gap-2">
                         <Lightbulb size={12}/> Intelligence Context
                     </h4>
                     
                     {!selectedCell ? (
-                        <div className="text-[10px] text-slate-500 italic mt-10 text-center px-4">
+                        <div className="text-[10px] text-slate-400 italic mt-10 text-center px-4">
                             Click a combination in the engine to view the deep statistical context and model calibration details.
                         </div>
                     ) : (
                         <div className="flex flex-col h-full overflow-y-auto custom-scrollbar pr-1">
                             {/* Combination Data */}
-                            <div className="space-y-2 text-[10px] bg-[#1e293b] p-3 rounded border border-[#334155] mb-4">
+                            <div className="space-y-2 text-[10px] bg-white p-3 rounded border border-slate-200 mb-4">
                                 {selectedCell.IS_FALLBACK && (
                                     <span className="text-amber-500 font-bold block mb-1">CATCH-ALL DEFAULT RULE</span>
                                 )}
@@ -482,8 +482,8 @@ const RuleMatrix = ({ feature, onUpdateFeature }) => {
                                     const bLayer = aLayer?.bins.find(b => b.id === binId);
                                     return (
                                         <div key={attrId} className="flex flex-col">
-                                            <span className="text-slate-500 font-bold mb-0.5 uppercase tracking-wider text-[8px]">{aLayer?.name}:</span> 
-                                            <span className="text-slate-300 font-mono text-[9px] bg-[#0f172a] px-1.5 py-0.5 rounded border border-[#334155] max-w-max">
+                                            <span className="text-slate-400 font-bold mb-0.5 uppercase tracking-wider text-[8px]">{aLayer?.name}:</span> 
+                                            <span className="text-slate-700 font-mono text-[9px] bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200 max-w-max">
                                                 {bLayer?.label || 'ANY'}
                                             </span>
                                         </div>
@@ -497,15 +497,15 @@ const RuleMatrix = ({ feature, onUpdateFeature }) => {
                                 return (
                                     <div className="flex-1 mb-4 flex flex-col gap-4 relative z-10">
                                         <div>
-                                            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Statistical Validation</span>
+                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Statistical Validation</span>
                                             <div className="grid grid-cols-2 gap-2">
-                                                <div className="bg-[#1e293b] p-2 rounded border border-[#334155]">
+                                                <div className="bg-white p-2 rounded border border-slate-200">
                                                     <span className="text-slate-400 text-[9px] block mb-1 flex items-center gap-1"><Users size={10}/> Samples (n)</span>
-                                                    <span className={`text-lg font-bold ${activeRule?.confidenceFlag === 'low' ? 'text-amber-400' : 'text-slate-200'}`}>{activeRule ? activeRule.sampleCount : '-'}</span>
+                                                    <span className={`text-lg font-bold ${activeRule?.confidenceFlag === 'low' ? 'text-amber-400' : 'text-slate-800'}`}>{activeRule ? activeRule.sampleCount : '-'}</span>
                                                 </div>
-                                                <div className="bg-[#1e293b] p-2 rounded border border-[#334155]">
+                                                <div className="bg-white p-2 rounded border border-slate-200">
                                                     <span className="text-slate-400 text-[9px] block mb-1 flex items-center gap-1"><TrendingUp size={10}/> Good/Bad</span>
-                                                    <span className="text-lg font-bold text-slate-200">{activeRule ? activeRule.goodBadRatio : '-'}</span>
+                                                    <span className="text-lg font-bold text-slate-800">{activeRule ? activeRule.goodBadRatio : '-'}</span>
                                                 </div>
                                             </div>
                                             {activeRule?.confidenceFlag === 'low' && (
@@ -517,14 +517,14 @@ const RuleMatrix = ({ feature, onUpdateFeature }) => {
                                         </div>
                                         
                                         <div>
-                                            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Score Calibration</span>
-                                            <div className="bg-[#1e293b] p-3 rounded border border-[#334155] flex flex-col gap-3">
+                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Score Calibration</span>
+                                            <div className="bg-white p-3 rounded border border-slate-200 flex flex-col gap-3">
                                                 <div className="flex justify-between items-center">
-                                                    <span className="text-[10px] font-bold text-slate-300">Model Suggestion</span>
+                                                    <span className="text-[10px] font-bold text-slate-700">Model Suggestion</span>
                                                     <span className="text-sm font-bold text-blue-400">{activeRule ? activeRule.modelSuggestedScore : '-'}</span>
                                                 </div>
-                                                <div className="flex justify-between items-center pt-2 border-t border-[#334155] border-dashed">
-                                                    <span className="text-[10px] font-bold text-white">Configured Score</span>
+                                                <div className="flex justify-between items-center pt-2 border-t border-slate-200 border-dashed">
+                                                    <span className="text-[10px] font-bold text-slate-900">Configured Score</span>
                                                     <span className="text-lg font-bold text-emerald-400">{activeRule?.propensityScore !== undefined && activeRule.propensityScore !== '' ? activeRule.propensityScore : '0.0'}</span>
                                                 </div>
                                             </div>

@@ -203,7 +203,7 @@ const HoneycombLayout = () => {
 
 
     return (
-        <div className="flex flex-col h-full w-full bg-[#0B1120] text-slate-300 font-sans overflow-x-hidden overflow-y-auto custom-scrollbar pb-10">
+        <div className="flex flex-col h-full w-full bg-slate-50 text-slate-700 font-sans overflow-x-hidden overflow-y-auto custom-scrollbar pb-10">
             
             <div className="p-4 space-y-4 max-w-[1600px] w-full mx-auto">
                 {/* ROW 1: CANVAS */}
@@ -258,9 +258,9 @@ const HoneycombLayout = () => {
                     <SimulationPanel framework={framework} />
                     
                     {/* Management Panel */}
-                    <div className="bg-[#1e293b] border border-[#334155] rounded-xl flex flex-col p-5 shadow-lg">
-                        <div className="flex items-center justify-between border-b border-[#334155] pb-3 mb-3">
-                            <h3 className="text-sm font-bold text-white uppercase tracking-widest">7. Framework Management</h3>
+                    <div className="bg-white border border-slate-200 rounded-xl flex flex-col p-5 shadow-lg">
+                        <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-3">
+                            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest">7. Framework Management</h3>
                         </div>
                         <div className="flex flex-col gap-2">
                             {[
@@ -269,11 +269,11 @@ const HoneycombLayout = () => {
                                 { name: 'SME Quick Score v1.0', status: 'Published', date: 'Mar 15, 2024'},
                                 { name: 'Green Loan Framework v1.0', status: 'Draft', date: 'Feb 10, 2024'}
                             ].map((fw, i) => (
-                                <div key={i} className="flex justify-between items-center py-2 px-3 bg-[#0f172a] border border-[#334155] rounded-lg">
-                                    <span className="text-xs font-semibold text-slate-300">{fw.name}</span>
+                                <div key={i} className="flex justify-between items-center py-2 px-3 bg-slate-50 border border-slate-200 rounded-lg">
+                                    <span className="text-xs font-semibold text-slate-700">{fw.name}</span>
                                     <div className="flex items-center gap-4 text-xs font-mono">
                                         <span className={`${fw.status === 'Active' ? 'text-emerald-400' : fw.status === 'Draft' ? 'text-slate-400' : 'text-blue-400'}`}>{fw.status}</span>
-                                        <span className="text-slate-500">{fw.date}</span>
+                                        <span className="text-slate-400">{fw.date}</span>
                                     </div>
                                 </div>
                             ))}

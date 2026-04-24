@@ -37,9 +37,9 @@ const SimulationPanel = ({ framework }) => {
                          || { label: 'Unknown', color: 'text-slate-400', bg: 'bg-slate-500/10' };
 
     return (
-        <div className="bg-[#1e293b] border border-[#334155] rounded-xl flex flex-col p-5 shadow-lg h-full">
-            <div className="flex flex-col border-b border-[#334155] pb-3 mb-4">
-                <h2 className="text-[10px] font-bold text-white uppercase tracking-widest flex items-center gap-2 mb-1">
+        <div className="bg-white border border-slate-200 rounded-xl flex flex-col p-5 shadow-lg h-full">
+            <div className="flex flex-col border-b border-slate-200 pb-3 mb-4">
+                <h2 className="text-[10px] font-bold text-slate-900 uppercase tracking-widest flex items-center gap-2 mb-1">
                     6. Preview Scoring & Decision Engine
                 </h2>
                 <span className="text-[10px] text-slate-400">Validate real-time mathematical computations and cut-off band execution.</span>
@@ -47,28 +47,28 @@ const SimulationPanel = ({ framework }) => {
 
             <div className="flex gap-4">
                 {/* Inputs Area */}
-                <div className="w-[180px] shrink-0 border-r border-[#334155] pr-4">
-                    <div className="flex gap-1 mb-4 text-[10px] font-bold text-slate-300">
-                        <button className="flex-1 py-1 rounded bg-[#0f172a] border border-[#334155]">JSON</button>
+                <div className="w-[180px] shrink-0 border-r border-slate-200 pr-4">
+                    <div className="flex gap-1 mb-4 text-[10px] font-bold text-slate-700">
+                        <button className="flex-1 py-1 rounded bg-slate-50 border border-slate-200">JSON</button>
                         <button className="flex-1 py-1 rounded bg-blue-600/20 text-blue-400 border border-blue-500/50">Form</button>
                     </div>
 
                     <div className="space-y-3">
                         <div className="flex items-center justify-between text-[10px]">
-                            <label className="text-slate-300 font-bold truncate pr-2">revenue_totalAnnual</label>
-                            <input type="text" className="w-16 shrink-0 bg-[#0f172a] border border-[#334155] rounded px-1.5 py-1 text-white text-right outline-none font-mono text-[9px]" value={payload.revenue_totalAnnual} onChange={(e) => setPayload({...payload, revenue_totalAnnual: e.target.value})} />
+                            <label className="text-slate-700 font-bold truncate pr-2">revenue_totalAnnual</label>
+                            <input type="text" className="w-16 shrink-0 bg-slate-50 border border-slate-200 rounded px-1.5 py-1 text-slate-900 text-right outline-none font-mono text-[9px]" value={payload.revenue_totalAnnual} onChange={(e) => setPayload({...payload, revenue_totalAnnual: e.target.value})} />
                         </div>
                         <div className="flex items-center justify-between text-[10px]">
-                            <label className="text-slate-300 font-bold truncate pr-2">ftes_current</label>
-                            <input type="text" className="w-16 shrink-0 bg-[#0f172a] border border-[#334155] rounded px-1.5 py-1 text-white text-right outline-none font-mono text-[9px]" value={payload.ftes_current} onChange={(e) => setPayload({...payload, ftes_current: e.target.value})} />
+                            <label className="text-slate-700 font-bold truncate pr-2">ftes_current</label>
+                            <input type="text" className="w-16 shrink-0 bg-slate-50 border border-slate-200 rounded px-1.5 py-1 text-slate-900 text-right outline-none font-mono text-[9px]" value={payload.ftes_current} onChange={(e) => setPayload({...payload, ftes_current: e.target.value})} />
                         </div>
                         <div className="flex items-center justify-between text-[10px]">
-                            <label className="text-slate-300 font-bold truncate pr-2">busAge_yrs</label>
-                            <input type="text" className="w-16 shrink-0 bg-[#0f172a] border border-[#334155] rounded px-1.5 py-1 text-white text-right outline-none font-mono text-[9px]" value={payload.busAge_yrs} onChange={(e) => setPayload({...payload, busAge_yrs: e.target.value})} />
+                            <label className="text-slate-700 font-bold truncate pr-2">busAge_yrs</label>
+                            <input type="text" className="w-16 shrink-0 bg-slate-50 border border-slate-200 rounded px-1.5 py-1 text-slate-900 text-right outline-none font-mono text-[9px]" value={payload.busAge_yrs} onChange={(e) => setPayload({...payload, busAge_yrs: e.target.value})} />
                         </div>
                         <div className="flex items-center justify-between text-[10px]">
-                            <label className="text-slate-300 font-bold truncate pr-2">industry_code</label>
-                            <select className="w-16 shrink-0 bg-[#0f172a] border border-[#334155] rounded px-1.5 py-1 text-white text-right outline-none text-[9px]" value={payload.industry_code} onChange={(e) => setPayload({...payload, industry_code: e.target.value})}>
+                            <label className="text-slate-700 font-bold truncate pr-2">industry_code</label>
+                            <select className="w-16 shrink-0 bg-slate-50 border border-slate-200 rounded px-1.5 py-1 text-slate-900 text-right outline-none text-[9px]" value={payload.industry_code} onChange={(e) => setPayload({...payload, industry_code: e.target.value})}>
                                 <option value="Manufacturing">MFG</option>
                                 <option value="Retail">RET</option>
                             </select>
@@ -81,27 +81,27 @@ const SimulationPanel = ({ framework }) => {
                 </div>
 
                 {/* Score Breakdown Area */}
-                <div className="flex-[2] flex flex-col justify-center border-r border-[#334155] pr-4">
-                    <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 border-b border-[#334155] pb-1">Mathematical Breakdown</h4>
+                <div className="flex-[2] flex flex-col justify-center border-r border-slate-200 pr-4">
+                    <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-200 pb-1">Mathematical Breakdown</h4>
                     <div className="space-y-1">
                         {computedResults.modules.map(mod => (
-                            <div key={mod.name} className="flex justify-between items-center py-1.5 border-b border-[#334155]/50 last:border-0">
+                            <div key={mod.name} className="flex justify-between items-center py-1.5 border-b border-slate-200/50 last:border-0">
                                 <div className="flex items-center gap-2">
                                     <div className={`w-2.5 h-2.5 rounded-sm ${mod.color}`}></div>
-                                    <span className="text-[10px] text-slate-300 font-semibold">{mod.name}</span>
+                                    <span className="text-[10px] text-slate-700 font-semibold">{mod.name}</span>
                                 </div>
-                                <span className="text-[10px] font-mono text-white font-bold">{mod.score}</span>
+                                <span className="text-[10px] font-mono text-slate-900 font-bold">{mod.score}</span>
                             </div>
                         ))}
                     </div>
 
                     {/* Explainer Block */}
-                    <div className="mt-3 bg-[#0f172a] border border-[#334155] p-2 rounded text-[9px] text-slate-400 flex flex-col gap-1.5 shadow-inner">
-                        <div className="flex items-center gap-1.5 text-blue-400 font-bold border-b border-[#334155] pb-1">
+                    <div className="mt-3 bg-slate-50 border border-slate-200 p-2 rounded text-[9px] text-slate-400 flex flex-col gap-1.5 shadow-inner">
+                        <div className="flex items-center gap-1.5 text-blue-400 font-bold border-b border-slate-200 pb-1">
                             <GitCommit size={10} /> Explaining: {computedResults.traceHit.featureName}
                         </div>
-                        <span className="leading-tight">Feature mapped payload to <span className="text-slate-200">[{computedResults.traceHit.matchedBucket}]</span> triggering Rule <span className="text-slate-200 font-mono">{computedResults.traceHit.ruleId}</span> (PT: +{computedResults.traceHit.scoreHit}).</span>
-                        <div className="flex gap-2 text-emerald-400/80 font-mono mt-1 pt-1 border-t border-[#334155]/50">
+                        <span className="leading-tight">Feature mapped payload to <span className="text-slate-800">[{computedResults.traceHit.matchedBucket}]</span> triggering Rule <span className="text-slate-800 font-mono">{computedResults.traceHit.ruleId}</span> (PT: +{computedResults.traceHit.scoreHit}).</span>
+                        <div className="flex gap-2 text-emerald-400/80 font-mono mt-1 pt-1 border-t border-slate-200/50">
                             <span>n={computedResults.traceHit.sampleSize}</span> | <span>Conf: {computedResults.traceHit.confidence}%</span>
                         </div>
                     </div>
