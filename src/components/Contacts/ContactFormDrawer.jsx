@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import {
     X, Save, User, Building2, ShieldCheck,
     CreditCard, History, AlertTriangle, ChevronDown,
-    ChevronUp, Eye, EyeOff, Lock, Info, Briefcase, BadgeCheck
+    ChevronUp, Eye, EyeOff, Lock, Info, Briefcase, BadgeCheck, Wallet
 } from 'lucide-react';
 
 const ContactFormDrawer = ({ isOpen, onClose, initialData, onSave, currentPrimaryName, isFirstContact }) => {
@@ -30,14 +30,17 @@ const ContactFormDrawer = ({ isOpen, onClose, initialData, onSave, currentPrimar
         dob: '',
         ssn: '', // Masked
 
-        annualIncome: '',
+        // Personal Financials
+        annualPersonalIncome: '',
+        personalNetWorth: '',
+        existingPersonalLoans: '',
+        monthlyDebtService: '',
         // Other Business
         otherBusinessOwnership: false,
         otherBusPercentage_owner1: 0,
         otherBusDescription_owner1: '',
         // Address & Housing
         homeAddress: '',
-        monthlyHousingPayment: '',
 
         // Demographics Expanded
         demographicSource: '', // Applicant Provided vs Visual Observation
@@ -66,8 +69,21 @@ const ContactFormDrawer = ({ isOpen, onClose, initialData, onSave, currentPrimar
     });
 
     const [showSSN, setShowSSN] = useState(false);
+    const [showPersonalFinancials, setShowPersonalFinancials] = useState(false);
     const [showPrimaryConfirm, setShowPrimaryConfirm] = useState(false);
     const [touched, setTouched] = useState({});
+
+    // --- Audit Logging ---
+    const logAuditEvent = (eventType, details) => {
+        console.log(`[AUDIT LOG] ${eventType}`, { timestamp: new Date().toISOString(), ...details });
+    };
+
+    const handleToggleFinancials = () => {
+        if (!showPersonalFinancials) {
+            logAuditEvent('PERSONAL_FINANCIALS_UNMASKED', { contactId: formData.id, user: 'System User' });
+        }
+        setShowPersonalFinancials(!showPersonalFinancials);
+    };
 
     // --- Effects ---
     useEffect(() => {
@@ -97,12 +113,14 @@ const ContactFormDrawer = ({ isOpen, onClose, initialData, onSave, currentPrimar
                 dob: '',
                 ssn: '',
 
-                annualIncome: '',
+                annualPersonalIncome: '',
+                personalNetWorth: '',
+                existingPersonalLoans: '',
+                monthlyDebtService: '',
                 otherBusinessOwnership: false,
                 otherBusPercentage_owner1: 0,
                 otherBusDescription_owner1: '',
                 homeAddress: '',
-                monthlyHousingPayment: '',
                 demographicSource: '',
                 lmiHouseholdStatus: '',
                 creditScore: '',
@@ -159,6 +177,11 @@ const ContactFormDrawer = ({ isOpen, onClose, initialData, onSave, currentPrimar
             return;
         }
 
+        if (!formData.annualPersonalIncome || !formData.personalNetWorth || !formData.monthlyDebtService) {
+            alert('Annual Personal Income, Personal Net Worth, and Monthly Debt Service are required fields.');
+            return;
+        }
+
         // Validation for Other Business Ownership
         if (formData.otherBusinessOwnership) {
             const pct = parseFloat(formData.otherBusPercentage_owner1);
@@ -171,6 +194,17 @@ const ContactFormDrawer = ({ isOpen, onClose, initialData, onSave, currentPrimar
                 return;
             }
         }
+
+        // Audit Logging for Financials
+        logAuditEvent('PERSONAL_FINANCIALS_UPDATED', {
+            contactId: formData.id,
+            updates: {
+                annualPersonalIncome: formData.annualPersonalIncome,
+                personalNetWorth: formData.personalNetWorth,
+                existingPersonalLoans: formData.existingPersonalLoans,
+                monthlyDebtService: formData.monthlyDebtService
+            }
+        });
 
         onSave(formData);
         onClose();
@@ -206,7 +240,7 @@ const ContactFormDrawer = ({ isOpen, onClose, initialData, onSave, currentPrimar
                         </div>
                         <div>
                             <h2 className="text-lg font-bold text-slate-900">
-                                {initialData ? 'Edit Contact' : 'New Contact'}
+                                {initialData ? `Edit ${initialData.firstName || 'Contact'}` : 'New Contact'}
                             </h2>
                             <div className="text-xs text-slate-500 flex items-center gap-1">
                                 {initialData ? `ID: ${initialData.id}` : 'Draft Record'}
@@ -451,7 +485,6 @@ const ContactFormDrawer = ({ isOpen, onClose, initialData, onSave, currentPrimar
                     )}
 
 
-
                     {/* 5. Credit & Financial (Borrower Only) */}
                     {isBorrower && (
                         <div className="border-b border-slate-200">
@@ -516,13 +549,54 @@ const ContactFormDrawer = ({ isOpen, onClose, initialData, onSave, currentPrimar
                                         )}
                                     </div>
 
-                                    <FormInput label="Annual Household Income" type="number" value={formData.annualIncome} onChange={v => handleChange('annualIncome', v)} />
-                                    <FormInput
-                                        label="Monthly Housing Payment"
-                                        type="number"
-                                        value={formData.monthlyHousingPayment}
-                                        onChange={v => handleChange('monthlyHousingPayment', v)}
-                                    />
+                                    {/* Personal Financials Section */}
+                                    <div className="bg-white p-4 rounded-lg border border-slate-200 mt-2">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                                <Wallet size={16} className="text-blue-600" /> Personal Financials
+                                            </h4>
+                                            <button
+                                                type="button"
+                                                onClick={handleToggleFinancials}
+                                                className="text-xs font-bold text-slate-500 hover:text-blue-600 flex items-center gap-1 transition-colors"
+                                            >
+                                                {showPersonalFinancials ? <><EyeOff size={14} /> Mask All</> : <><Eye size={14} /> Unmask All</>}
+                                            </button>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <FormInput 
+                                                label="Annual Personal Income" 
+                                                type={showPersonalFinancials ? 'number' : 'password'} 
+                                                value={formData.annualPersonalIncome} 
+                                                onChange={v => handleChange('annualPersonalIncome', v)} 
+                                                required 
+                                                placeholder="Enter annual income"
+                                            />
+                                            <FormInput 
+                                                label="Personal Net Worth" 
+                                                type={showPersonalFinancials ? 'number' : 'password'} 
+                                                value={formData.personalNetWorth} 
+                                                onChange={v => handleChange('personalNetWorth', v)} 
+                                                required 
+                                                placeholder="Enter net worth"
+                                            />
+                                            <FormInput 
+                                                label="Existing Personal Loans" 
+                                                type={showPersonalFinancials ? 'number' : 'password'} 
+                                                value={formData.existingPersonalLoans} 
+                                                onChange={v => handleChange('existingPersonalLoans', v)} 
+                                                placeholder="Total outstanding personal loans"
+                                            />
+                                            <FormInput 
+                                                label="Monthly Debt Service" 
+                                                type={showPersonalFinancials ? 'number' : 'password'} 
+                                                value={formData.monthlyDebtService} 
+                                                onChange={v => handleChange('monthlyDebtService', v)} 
+                                                required 
+                                                placeholder="Total monthly obligations"
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </div>

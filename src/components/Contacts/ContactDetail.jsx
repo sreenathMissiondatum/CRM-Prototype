@@ -74,7 +74,7 @@ const ContactOverview = ({ contact, isBorrower, otherContacts, onEditCurrent, ha
                             <DetailRow label="Veteran Status" value={contact.veteran} />
                             <div className="col-span-2 pt-2 mt-2 border-t border-slate-50 grid grid-cols-2 gap-x-16">
                                 <DetailRow label="Credit Score" value={contact.creditScore} sensitive />
-                                <DetailRow label="Income Range" value={contact.income} sensitive />
+                                <DetailRow label="Personal Income" value={contact.annualPersonalIncome ? `$${contact.annualPersonalIncome.toLocaleString()}` : null} sensitive />
                             </div>
                         </div>
                     </Section>
@@ -212,11 +212,13 @@ const ContactDetail = ({ onBack, initialContactName }) => {
             gender: 'Female',
             veteran: 'Non-Veteran',
             disability: 'No',
-            income: '$100k-$150k',
+            annualPersonalIncome: 120000.00,
+            personalNetWorth: 500000.00,
+            existingPersonalLoans: 15000.00,
+            monthlyDebtService: 1200.00,
             creditScore: '720',
             dob: '1985-04-12',
             ssn: '***-**-1234',
-            monthlyHousingPayment: 2400.00,
             homeAddress: '123 Maple Dr, Detroit, MI 48201',
             demographicSource: 'Applicant Provided',
             lmiHouseholdStatus: 'Middle',
@@ -253,7 +255,10 @@ const ContactDetail = ({ onBack, initialContactName }) => {
             gender: 'Male',
             veteran: 'Veteran',
             creditScore: '710',
-            income: '$80k-$100k',
+            annualPersonalIncome: 85000.00,
+            personalNetWorth: 120000.00,
+            existingPersonalLoans: 5000.00,
+            monthlyDebtService: 800.00,
             dob: '1982-11-05',
             ssn: '***-**-5678',
             avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150&h=150'
@@ -281,7 +286,10 @@ const ContactDetail = ({ onBack, initialContactName }) => {
             gender: 'Female',
             veteran: 'Non-Veteran',
             creditScore: '750',
-            income: '$60k-$80k',
+            annualPersonalIncome: 75000.00,
+            personalNetWorth: 90000.00,
+            existingPersonalLoans: 0.00,
+            monthlyDebtService: 500.00,
             dob: '1978-03-22',
             ssn: '***-**-9012',
             avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=150&h=150'
@@ -309,7 +317,10 @@ const ContactDetail = ({ onBack, initialContactName }) => {
             gender: 'Male',
             veteran: 'Non-Veteran',
             creditScore: '800',
-            income: '$200k+',
+            annualPersonalIncome: 250000.00,
+            personalNetWorth: 2000000.00,
+            existingPersonalLoans: 0.00,
+            monthlyDebtService: 2000.00,
             dob: '1970-07-15',
             ssn: '***-**-3456',
             avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=150&h=150'
@@ -337,7 +348,10 @@ const ContactDetail = ({ onBack, initialContactName }) => {
             gender: 'Prefer not to say',
             veteran: 'Prefer not to say',
             creditScore: '',
-            income: '',
+            annualPersonalIncome: '',
+            personalNetWorth: '',
+            existingPersonalLoans: '',
+            monthlyDebtService: '',
             dob: '',
             ssn: ''
         },
